@@ -19,4 +19,4 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Omit em
 
 ## Architecture and decisions
 
-Significant architecture decisions are recorded in **ADRs** under `docs/adr/` (see [docs/adr/README.md](docs/adr/README.md) when present). Use the ADR template for new decisions.
+Significant architecture decisions are recorded in **[docs/adr/ADRs.md](docs/adr/ADRs.md)** (one file, grouped by sprint). Add new ADRs under the relevant sprint section; format: Decision, Rationale, Alternatives, Cost, Consequences, Status.

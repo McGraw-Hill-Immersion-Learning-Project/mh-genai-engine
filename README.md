@@ -24,7 +24,7 @@ Content-grounded GenAI **Engine** (Project A) for McGraw Hill’s Instructor Too
 .github/                 # Issue and PR templates
 docs/
   api/                   # API contract and API-related notes
-  adr/                   # Architecture decision records (Sprint 1)
+  adr/                   # Architecture decision records (ADRs.md, by sprint)
   specs/                 # Project specs (SOW, charter)
 CONTRIBUTING.md          # How to contribute (issues, PRs, changelog, ADRs)
 CHANGELOG.md             # General project changelog

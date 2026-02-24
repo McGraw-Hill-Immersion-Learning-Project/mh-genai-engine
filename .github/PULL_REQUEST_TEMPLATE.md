@@ -2,6 +2,8 @@
 
 <!-- Briefly describe what this PR does. -->
 
+<!-- Link the PR to its issue (optional): e.g. closes #123 -->
+
 ## Type of change
 
 - [ ] Bug fix

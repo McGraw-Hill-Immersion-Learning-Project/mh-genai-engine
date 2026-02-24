@@ -15,6 +15,8 @@ Content-grounded GenAI **Engine** (Project A) for McGraw Hill’s Instructor Too
 | [docs/api/openapi.yaml](docs/api/openapi.yaml) | Engine API contract (OpenAPI 3.1) — endpoints, request/response shapes, errors. |
 | [docs/api/CHANGELOG_API.md](docs/api/CHANGELOG_API.md) | API version history (Keep a Changelog). |
 | [docs/api/API_DEFERRED_AND_NOTES.md](docs/api/API_DEFERRED_AND_NOTES.md) | Deferred API items and open questions (e.g. `sections`, batch assessment, structured rubric). |
+| [docs/runbook.md](docs/runbook.md) | How to run locally, deploy, and manage secrets (ADR-006). |
+| [docs/adr/ADRs.md](docs/adr/ADRs.md) | Architecture decisions; [README](docs/adr/README.md) maps ADRs to implementation. |
 | [CHANGELOG.md](CHANGELOG.md) | Project changelog (app, infra, docs — not API contract). |
 | `docs/specs/` | SOW and charter PDFs (Project A, Project B, rolling plan). |
 
@@ -22,15 +24,28 @@ Content-grounded GenAI **Engine** (Project A) for McGraw Hill’s Instructor Too
 
 ```
 .github/                 # Issue and PR templates
+app/                     # FastAPI backend
+  api/                   # HTTP routers (health, future endpoints)
+  core/                  # Business logic: rag/, ingestion/
+  providers/             # LLM, embeddings, storage adapters 
+  db/                    # Vector store
+  models/                # Pydantic schemas
+  config.py              # Settings from .env
+data/                    # Document storage: raw/, processed/, samples/
 docs/
   api/                   # API contract and API-related notes
-  adr/                   # Architecture decision records (ADRs.md, by sprint)
+  adr/                   # Architecture decision records (ADRs.md, implementation map)
   specs/                 # Project specs (SOW, charter)
+tests/                   # Unit tests (mirrors app/ structure)
+Dockerfile               # Container build
+docker-compose.yml       # Local dev: docker compose up
+requirements.txt         # Pinned dependencies
+.env.example             # Env var template (copy to .env)
 CONTRIBUTING.md          # How to contribute (issues, PRs, changelog, ADRs)
 CHANGELOG.md             # General project changelog
 ```
 
-Application code (ingestion, RAG, server) will be added as the team implements per the Sprint 1–4 plan.
+Run locally: `cp .env.example .env` then `docker compose up --build`. Verify: `curl http://localhost:8000/health`.
 
 ## Contributing
 

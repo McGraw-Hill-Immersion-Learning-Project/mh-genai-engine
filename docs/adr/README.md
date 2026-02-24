@@ -7,3 +7,18 @@ We use **Architecture Decision Records** to capture architecturally significant 
 | Sprint | ADRs |
 |--------|------|
 | [Sprint 1](ADRs.md#sprint-1) | 001–006 (Provider, Vector DB, RAG, Backend, Deployment, Key Management) |
+
+---
+
+## Implementation status
+
+Where each ADR is reflected in the codebase:
+
+| ADR | Implementation |
+|-----|----------------|
+| **ADR-001** (LLM Provider) | `app/providers/llm/` — Protocol in `base.py`; stubs: `gemini.py`, `anthropic.py`. Provider/model selected via `LLM_PROVIDER`, `LLM_MODEL` env vars. |
+| **ADR-002** (Vector DB) | `app/db/vector/` — Protocol in `base.py`; stubs: `chroma.py`, `pgvector.py`. Selected via `VECTOR_DB_PROVIDER`. |
+| **ADR-003** (RAG Framework) | `app/core/rag/`, `app/core/ingestion/` — framework-agnostic; pipeline and service stubs ready for LangChain/custom/LlamaIndex. |
+| **ADR-004** (FastAPI) | `app/main.py`, `app/api/` — FastAPI app with health router. |
+| **ADR-005** (Docker Compose) | `Dockerfile`, `docker-compose.yml` — `docker compose up` runs the app locally. |
+| **ADR-006** (Key Management) | `app/config.py` (pydantic-settings), `.env.example`, [docs/runbook.md](../runbook.md) — env vars for config and secrets. |

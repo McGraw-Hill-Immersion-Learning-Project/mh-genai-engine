@@ -6,11 +6,15 @@ How to run and deploy the Engine, and how secrets are managed. Per ADR-006: secr
 
 ## Required env vars
 
-*(Fill in when the app exists. Use `.env.example` in repo root as a template; copy to `.env` and set values.)*
+None required for health check. See `.env.example` in repo root for all available vars. Credentials required only when using the corresponding provider (e.g. `GEMINI_API_KEY` when `LLM_PROVIDER=gemini`).
 
 | Variable | Purpose | Example / notes |
 |----------|---------|-----------------|
-| TBD      | TBD     | TBD             |
+| APP_ENV | Environment name | `development`, `staging`, `production` |
+| LLM_PROVIDER | LLM backend | `gemini`, `anthropic` |
+| LLM_MODEL | Model name | `gemini-3-flash-preview`, `claude-sonnet-4-6` |
+| GEMINI_API_KEY | Gemini API key | Required when using Gemini |
+| ANTHROPIC_API_KEY | Anthropic API key | Required when using Anthropic |
 
 ---
 
@@ -23,11 +27,10 @@ How to run and deploy the Engine, and how secrets are managed. Per ADR-006: secr
 
 ## Local run
 
-*(Steps to run the backend locally. Fill in when backend exists.)*
-
-1. TBD (e.g. `cp .env.example .env`, set values)
-2. TBD (e.g. `docker compose up` or `uvicorn app.main:app --reload`)
-3. TBD (how to verify: health check, curl)
+1. `cp .env.example .env` — copy template and set any values (optional for health check only)
+2. **Docker:** `docker compose up --build` — builds and runs the app on port 8000
+3. **No Docker:** `pip install -r requirements.txt` then `uvicorn app.main:app --reload`
+4. Verify: `curl http://localhost:8000/health` returns `{"status":"ok"}`
 
 ---
 
@@ -58,4 +61,4 @@ How to run and deploy the Engine, and how secrets are managed. Per ADR-006: secr
 
 ---
 
-*Last updated: TBD. Replace TBDs and keep this doc in sync with the backend and deploy process.*
+*Last updated: 2026-02-23. Keep this doc in sync with the backend and deploy process.*

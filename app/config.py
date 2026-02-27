@@ -12,10 +12,10 @@ class Settings(BaseSettings):
     app_env: str = "development"
 
     # Provider selection
-    llm_provider: str = "gemini"
-    llm_model: str = "gemini-3-flash-preview"
-    embedding_provider: str = "gemini"
-    embedding_model: str = "text-embedding-004"
+    llm_provider: str = "anthropic"
+    llm_model: str = "claude-sonnet-4-6"
+    embedding_provider: str = "bge"
+    embedding_model: str = "BAAI/bge-base-en-v1.5"
     vector_db_provider: str = "chroma"
     storage_provider: str = "local"
 

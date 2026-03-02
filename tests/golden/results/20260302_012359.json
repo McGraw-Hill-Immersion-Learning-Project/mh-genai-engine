@@ -1,0 +1,83 @@
+{
+  "run_at": "20260302_012359",
+  "results": [
+    {
+      "question": "What is the difference between microeconomics and macroeconomics?",
+      "answer": "## Microeconomics vs. Macroeconomics\n\nBased on the course materials, here is the distinction between the two:\n\n### Microeconomics\n- Focuses on **parts of the economy**: individuals, firms, and industries\n- Examines the **actions of individual agents** such as households, workers, and businesses\n*(Source: Economics_OER.pdf, Section 1.2)*\n\n### Macroeconomics\n- Looks at the **economy as a whole**\n- Focuses on broad issues such as:\n  - Growth in the standard of living\n  - Unemployment\n  - Inflation\n  - Government deficits\n  - Levels of exports and imports\n*(Source: Economics_OER.pdf, Section 1.2)*\n\n### Key Relationship\nImportantly, the course materials emphasize that **microeconomics and macroeconomics are not separate subjects**, but rather **complementary perspectives** on the overall economy. Just as studying a lake requires both examining individual plants and animals (micro) and understanding the overall food chain (macro), both perspectives work together to provide a complete understanding of the economy.\n*(Source: Economics_OER.pdf)*\n\n### Policy Tools (Macroeconomics)\nMacroeconomics uses two types of policies to pursue its goals:\n- **Monetary policy**\n- **Fiscal policy**",
+      "sources": [
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.8309204083132515
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.8232390389896027
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.8215994238853455
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7737332391023928
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7582677006721497
+        }
+      ]
+    },
+    {
+      "question": "Explain the law of supply and demand.",
+      "answer": "## Law of Demand\n\nThe **law of demand** describes the **inverse relationship** between price and quantity demanded. As stated in the source:\n\n> \"When the price of a gallon of gasoline increases, for example, people look for ways to reduce their consumption.\"\n\nIn short: **a higher price leads to a lower quantity demanded**, and a lower price leads to a higher quantity demanded. This relationship is visually represented by a **demand curve**.\n\n*(Source: Economics_OER.pdf, Section 3.1)*\n\n---\n\n## Law of Supply\n\nThe **law of supply** describes the **positive relationship** between price and quantity supplied:\n\n> \"A higher price leads to a higher quantity supplied and a lower price leads to a lower quantity supplied.\"\n\nThis means producers are willing to supply more of a good when prices are higher. This relationship is represented by a **supply curve**.\n\n*(Source: Economics_OER.pdf, Section 3.1)*\n\n---\n\n## Key Assumptions\n\nBoth laws assume that **all other variables affecting demand or supply are held constant**, isolating the relationship between price and quantity alone.\n\n*(Source: Economics_OER.pdf, Section 3.1)*\n\n---\n\n## Together: Demand & Supply\n\nThese two forces interact in markets to determine **equilibrium** \u2014 the price and quantity at which the market \"clears.\" The demand and supply model is described as **\"one of the most powerful models in all of economics.\"**\n\n*(Source: Economics_OER.pdf, Chapter 3 Introduction)*",
+      "sources": [
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7762792706489563
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7410600627100519
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7354245781898499
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7286781072616577
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7194351292329924
+        }
+      ]
+    },
+    {
+      "question": "What is price elasticity of demand?",
+      "answer": "## Price Elasticity of Demand\n\nBased on the course materials, the **price elasticity of demand** is defined as:\n\n> \"The percentage change in the quantity demanded of a good or service divided by the percentage change in the price.\"\n*(Source: Economics_OER.pdf)*\n\n### Key Characteristics:\n\n- **Always negative**: Because price and quantity demanded move in **opposite directions**, the price elasticity of demand is always a negative number. *(Source: Economics_OER.pdf)*\n- It is usually **reported as its absolute value** (without a negative sign). *(Source: Economics_OER.pdf)*\n\n### Categories of Elasticity:\n\n| Category | Elasticity Value |\n|----------|-----------------|\n| **Elastic** | Greater than one (high responsiveness to price changes) |\n| **Inelastic** | Less than one (low responsiveness to price changes) |\n| **Unitary** | Equal to one |\n\n*(Source: Economics_OER.pdf)*\n\n### Example from the Text:\nWhen price decreases from **$70 to $60**, an elasticity value of **0.45** (less than one) was calculated, indicating **inelastic demand** in that interval. *(Source: Economics_OER.pdf)*",
+      "sources": [
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.801620006561285
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.8005101442945175
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.784448253181474
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7766944169998224
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7705525892643701
+        }
+      ]
+    }
+  ]
+}

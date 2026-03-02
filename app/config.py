@@ -32,3 +32,6 @@ class Settings(BaseSettings):
     chroma_host: str | None = None
     chroma_port: int = 8000
     database_url: str = ""
+
+
+settings = Settings()

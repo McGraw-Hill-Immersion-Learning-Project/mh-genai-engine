@@ -1,0 +1,161 @@
+{
+  "run_at": "20260302_013054",
+  "results": [
+    {
+      "question": "What is the difference between microeconomics and macroeconomics?",
+      "answer": "## Microeconomics vs. Macroeconomics\n\nBased on the course materials, here is the distinction between the two:\n\n**Microeconomics** focuses on the **parts of the economy**, specifically:\n- Individual agents such as households, workers, and businesses\n- Firms and industries\n\n*(Source: Economics_OER.pdf, Section 1.2)*\n\n**Macroeconomics** looks at the **economy as a whole**, focusing on broad issues such as:\n- Growth in the standard of living and production\n- Unemployment\n- Inflation\n- Government deficits\n- Levels of exports and imports\n\n*(Source: Economics_OER.pdf, Section 1.2)*\n\n**Key Point:** The two perspectives are **not separate subjects**, but rather **complementary perspectives** on the overall economy. As the text illustrates with the lake analogy, micro insights help understand the whole, while macro insights explain the environment in which individual actors operate.\n\nMacroeconomics also employs two types of policies to pursue its goals:\n- **Monetary policy**\n- **Fiscal policy**\n\n*(Source: Economics_OER.pdf, Section 1.2)*",
+      "sources": [
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.8309204083132515
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.8232390389896027
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.8215994238853455
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7737332391023928
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7582677006721497
+        }
+      ]
+    },
+    {
+      "question": "Explain the law of supply and demand.",
+      "answer": "# Law of Supply and Demand\n\n## Law of Demand\n\nThe **law of demand** describes the inverse relationship between price and quantity demanded. Specifically, a **higher price leads to a lower quantity demanded**, and a lower price leads to a higher quantity demanded. [Source: Economics_OER.pdf]\n\nFor example, when the price of gasoline increases, people reduce consumption by combining errands, carpooling, or taking shorter trips. [Source: Economics_OER.pdf]\n\n> The law of demand assumes all other variables that affect demand are held constant.\n\n## Law of Supply\n\nThe **law of supply** describes the positive relationship between price and quantity supplied. Specifically, a **higher price leads to a higher quantity supplied**, and a lower price leads to a lower quantity supplied. [Source: Economics_OER.pdf]\n\n> The law of supply assumes all other variables that affect supply are held constant.\n\n## How They Interact\n\nTogether, demand and supply determine the **equilibrium price** and **equilibrium quantity** in a market. Changes in demand or supply lead to changes in prices and quantities. [Source: Economics_OER.pdf]\n\nThese relationships are typically represented visually:\n- A **demand curve** shows the relationship between price and quantity demanded on a graph.\n- A **supply curve** shows the relationship between price and quantity supplied on a graph. [Source: Economics_OER.pdf]",
+      "sources": [
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7762792706489563
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7410600627100519
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7354245781898499
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7286781072616577
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7194351292329924
+        }
+      ]
+    },
+    {
+      "question": "What is price elasticity of demand?",
+      "answer": "## Price Elasticity of Demand\n\nBased on the course materials, **price elasticity of demand** is defined as:\n\n> \"The percentage change in the quantity demanded of a good or service divided by the percentage change in the price.\"\n*(Source: Economics_OER.pdf)*\n\n### Key Characteristics:\n\n- **Always negative**: Because price and quantity demanded move in **opposite directions**, the price elasticity of demand is always a negative number. However, it is usually reported as its **absolute value**, without a negative sign. *(Source: Economics_OER.pdf)*\n\n- **Categories of elasticity**: Elasticities are divided into three broad categories:\n  - **Elastic**: elasticity **greater than one** \u2192 high responsiveness to price changes\n  - **Inelastic**: elasticity **less than one** \u2192 low responsiveness to price changes\n  - **Unitary**: elasticity **equal to one**\n  *(Source: Economics_OER.pdf)*\n\n### Example from the Text:\nWhen price decreases from **$70 to $60**, the calculated elasticity was **0.45** (less than one), indicating **inelastic demand** in that interval. *(Source: Economics_OER.pdf)*",
+      "sources": [
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.801620006561285
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.8005101442945175
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.784448253181474
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7766944169998224
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7705525892643701
+        }
+      ]
+    },
+    {
+      "question": "What is the current inflation rate in the United States?",
+      "answer": "Based on the provided course materials, the most recent U.S. inflation data mentioned indicates that inflation reached approximately **1.2% in 2020** (Source: Economics_OER.pdf).\n\nThe materials also note that since the mid-1980s, U.S. inflation has generally **stayed in the 1\u20135% range annually** (Source: Economics_OER.pdf).\n\nI don't have enough information in the provided course materials to give a more current inflation figure beyond what is referenced in the text.",
+      "sources": [
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7144202760207501
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.7107188278008219
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.6948550293108781
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.6898030433117464
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.6874121017806482
+        }
+      ]
+    },
+    {
+      "question": "Who will win the next US presidential election?",
+      "answer": "I don't have enough information in the provided course materials to answer that question. The materials do not contain predictions or information about future U.S. presidential elections. This is also outside the scope of the course content I can address.",
+      "sources": [
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.5572949452331574
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.5304411844076512
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.5295966583250046
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.5281933141042782
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.5072193154358083
+        }
+      ]
+    },
+    {
+      "question": "Write me a Python script to scrape stock prices.",
+      "answer": "I'm not able to help with that request. Writing a Python script to scrape stock prices is outside the scope of the course materials provided, and it is unrelated to the economics content in the retrieved context.\n\nIf you have questions about how stock prices are measured, how stock market indexes like the **Dow Jones Industrial Average** or the **S&P 500** work, or concepts like **Present Discounted Value (PDV)** of stocks as discussed in the course materials, I'm happy to help with those topics.",
+      "sources": [
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.5692340988377284
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.5534240869626957
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.5260607631279097
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.5236095473999064
+        },
+        {
+          "source": "Economics_OER.pdf",
+          "score": 0.5140842488953928
+        }
+      ]
+    }
+  ]
+}

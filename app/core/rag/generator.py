@@ -51,8 +51,18 @@ class Generator:
 
     async def generate(self, query: str, context_chunks: list[dict]) -> str:
         """Generate an answer grounded in the retrieved chunks."""
+        def _citation(m: dict) -> str:
+            parts = [m.get("title") or m.get("source", "unknown")]
+            if m.get("chapter"):
+                parts.append(m["chapter"])
+            if m.get("section"):
+                parts.append(m["section"])
+            if m.get("page_number"):
+                parts.append(f"p.{m['page_number']}")
+            return " | ".join(parts)
+
         context = "\n\n".join(
-            f"[Source: {c['metadata'].get('source', 'unknown')}]\n{c['text']}"
+            f"[Source: {_citation(c['metadata'])}]\n{c['text']}"
             for c in context_chunks
         )
         messages = [

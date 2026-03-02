@@ -1,5 +1,6 @@
 """pgvector vector store using asyncpg."""
 
+import json
 import uuid
 import asyncpg
 from pgvector.asyncpg import register_vector
@@ -17,9 +18,15 @@ class PGVectorStore:
 
     async def initialize(self) -> None:
         """Create connection pool, enable pgvector extension, and create table + index."""
+        # Step 1: enable extension first (before register_vector runs)
+        bootstrap = await asyncpg.create_pool(settings.database_url)
+        async with bootstrap.acquire() as conn:
+            await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+        await bootstrap.close()
+
+        # Step 2: create pool with vector type registered
         self._pool = await asyncpg.create_pool(settings.database_url, init=register_vector)
         async with self._pool.acquire() as conn:
-            await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS document_chunks (
                     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -46,7 +53,7 @@ class PGVectorStore:
         ids = [str(uuid.uuid4()) for _ in documents]
 
         rows = [
-            (ids[i], documents[i], embeddings[i], metadatas[i])
+            (ids[i], documents[i], embeddings[i], json.dumps(metadatas[i]))
             for i in range(len(documents))
         ]
 
@@ -76,7 +83,7 @@ class PGVectorStore:
                 n_results,
             )
         return [
-            {"id": str(r["id"]), "text": r["text"], "metadata": r["metadata"], "score": r["score"]}
+            {"id": str(r["id"]), "text": r["text"], "metadata": json.loads(r["metadata"]), "score": r["score"]}
             for r in rows
         ]
 

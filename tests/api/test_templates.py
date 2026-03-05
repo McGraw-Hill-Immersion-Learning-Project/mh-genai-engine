@@ -2,18 +2,13 @@
 
 from fastapi.testclient import TestClient
 
-from app.main import app
-
-
-client = TestClient(app)
-
 
 class TestTemplatesEndpoint:
-    def test_returns_200(self) -> None:
+    def test_returns_200(self, client: TestClient) -> None:
         resp = client.get("/templates")
         assert resp.status_code == 200
 
-    def test_response_shape_matches_template_list(self) -> None:
+    def test_response_shape_matches_template_list(self, client: TestClient) -> None:
         resp = client.get("/templates")
         data = resp.json()
 

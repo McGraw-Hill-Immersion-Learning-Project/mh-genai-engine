@@ -3,7 +3,9 @@
 ## 1. OER Selected
 
 **Textbook:** Principles of Economics (OpenStax)
+
 **File:** `data/raw/Economics_OER.pdf`
+
 **Source:** OpenStax (openstax.org) -- openly licensed under CC BY 4.0, free to use and redistribute.
 
 **Why this OER:**
@@ -30,6 +32,10 @@ Chunking uses `RecursiveCharacterTextSplitter` from `langchain-text-splitters`.
 | Separators | `\n\n`, `\n`, `. `, ` `, `""` | Tries to split on paragraph, then sentence, then word boundaries before hard-splitting.                         |
 
 **Per-page chunking:** Text is extracted page by page via PyMuPDF. Each page is chunked independently and every chunk is tagged with its source page number, preserving page provenance for citations.
+
+**Known limitation:** Paragraphs spanning a page break are split at the boundary, which can produce incomplete chunks. The 50-character overlap partially mitigates this.
+
+**Planned upgrade (global-text chunking):** Replace per-page chunking with global-text chunking: extract all page text as one continuous string while building a character-offset-to-page map, chunk the full text so `RecursiveCharacterTextSplitter` finds natural paragraph/sentence boundaries, then assign `page_number` per chunk via the offset map. This preserves citation accuracy without sacrificing chunk quality.
 
 **Planned experiments:** The current character-based strategy is a starting point. We plan to evaluate the following alternatives in later sprints:
 
@@ -63,7 +69,31 @@ PDF / TXT file (storage)
         |
    Text Chunker          -- RecursiveCharacterTextSplitter (500 chars, 50 overlap)
         |
-   Embedding Provider    -- BAAI/bge-base-en-v1.5 (local, 768-dim, normalized)
+   Embedding Provider    -- batched (default batch size 64) to minimize API round-trips
         |
    Vector Store          -- PostgreSQL + pgvector, HNSW cosine index
 ```
+
+## 6. Test Strategy
+
+**Test fixture:** A small synthetic PDF (2-3 pages, known text content, with a TOC/bookmarks) committed to `tests/fixtures/`. Known content allows deterministic assertions.
+
+**Parser unit tests** (`tests/core/ingestion/test_parser.py`):
+
+- Extracts correct text from each page.
+- Returns correct page count.
+- Extracts TOC entries (chapter/section titles and page numbers).
+- Handles a PDF with no TOC gracefully (empty list, no crash).
+
+**Chunker unit tests** (`tests/core/ingestion/test_chunker.py`):
+
+- Chunk count is within expected range for known input.
+- No empty chunks produced.
+- Every chunk has all required metadata fields (`source_key`, `title`, `page_number`, `chapter`, `section`, `chunk_id`).
+- `page_number` values are valid (within document page range).
+
+**Service integration test** (`tests/core/ingestion/test_service.py`):
+
+- Uses a mock embedding provider (returns fixed-dimension zero vectors) to avoid API calls.
+- Uses a mock vector store (in-memory list) to avoid DB dependency.
+- Verifies full pipeline: PDF in → chunks with embeddings stored.

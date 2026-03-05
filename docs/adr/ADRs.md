@@ -29,23 +29,23 @@ All architecture decisions in one place, grouped by sprint.
 
 ### ADR-002: Vector Database
 
-- **Decision:** ChromaDB (local) for Sprint 1–2; evaluate Pinecone (or other hosted) later.
-- **Rationale:** [fill in]
-- **Alternatives considered:** [e.g. Qdrant, pgvector, Pinecone from day one.]
-- **Cost:** ChromaDB free; Pinecone ~$70/mo if we move later.
-- **Consequences/Positives:** [e.g. Local only for now; migration path needed if we go hosted for staging/demo.]
-- **Status:** Proposed
+- **Decision:** pgvector (PostgreSQL extension) for Sprint 1–2; evaluate hosted vector DBs (Pinecone, Qdrant) later if needed.
+- **Rationale:** pgvector runs inside PostgreSQL, which we already use for the app DB, no extra service to run or manage. HNSW indexing gives fast approximate nearest-neighbour search. Keeps the stack simple for POC: one database, one Docker container.
+- **Alternatives considered:** ChromaDB (lightweight but a separate service; less mature operationally), Qdrant (purpose-built but adds infra complexity), Pinecone (hosted, no ops, but $70+/mo and vendor lock-in from day one).
+- **Cost:** Free (OSS, runs in existing Postgres container). Pinecone ~$70/mo if we migrate for hosted staging/demo.
+- **Consequences/Positives:** Single DB for relational + vector data; cosine similarity via HNSW index. Migration path to a dedicated vector DB is straightforward, same embedding interface, swap the store implementation.
+- **Status:** Approved
 
 ---
 
 ### ADR-003: RAG Framework
 
-- **Decision:** [LangChain vs custom vs LlamaIndex — choose one.]
-- **Rationale:** [fill in]
-- **Alternatives considered:** [fill in]
-- **Cost:** [if applicable]
-- **Consequences/Positives:** [e.g. Learning curve, lock-in, or flexibility trade-off.]
-- **Status:** Proposed
+- **Decision:** Custom RAG pipeline (no framework).
+- **Rationale:** LangChain and LlamaIndex add significant abstraction overhead and opinionated data models that conflict with our provider-agnostic design (ADR-001, ADR-007). For a focused POC with a known retrieval pattern (embed → HNSW search → LLM generate), a custom pipeline is simpler, easier to debug, and has no framework lock-in.
+- **Alternatives considered:** LangChain (heavy abstractions, fast to prototype but hard to customise), LlamaIndex (good for document pipelines but overkill for POC scope), Haystack (similar trade-offs).
+- **Cost:** None (OSS dependencies only).
+- **Consequences/Positives:** Full control over retrieval logic (e.g. score threshold filtering at 0.65), prompt construction, and metadata handling. Every step is explicit and testable.
+- **Status:** Approved
 
 ---
 

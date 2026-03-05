@@ -4,25 +4,56 @@ This document tracks fields, endpoints, and behaviors that are **explicitly defe
 
 ---
 
-## Deferred / Develop Later
+## Resolved (v0.2.0)
 
 ### Lesson outline: `sections` (content scope)
 
-- **Status:** Deferred. Not added to `LessonOutlineRequest` in v0.
-- **Reason:** Unclear what values to use and how to handle chapters that don’t have clear section separation (e.g. flat structure, single long chapter).
-- **Next step:** Product/Engine team to define: (1) section identifier format (e.g. section titles, IDs from ingestion), (2) behavior when chapter has no sections (ignore field vs. treat whole chapter as one section). Then add optional `sections` (e.g. `string[]`) to the request.
+- **Status:** Resolved in v0.2.0.
+- **Resolution:** `section` and `subSection` added as optional string fields to `LessonOutlineRequest`. Values come from the content catalog / ingestion pipeline.
+- **Previous concern:** Unclear what values to use and how to handle chapters without clear sections. Decision: accept as optional, best-effort scoping.
+
+### Endpoint routing: `workflow` field vs endpoint path
+
+- **Status:** Resolved in v0.2.0.
+- **Resolution:** Endpoint path is the workflow discriminator (e.g. `/generate/lesson-outline`). No `workflow` field in request body. Team B's Template Pack included `workflow` as a required body field; Team A decided against it to avoid redundancy and mismatch bugs.
+
+---
+
+## Deferred / Develop Later
+
+### Workflow 2: Assessment Generation Tool — API contract TBD
+
+- **Status:** Deferred. Workflow 2 scope changed from narrow MCQ transform to full Assessment Generation Tool (per Prof. Shafae, 2026-02-24).
+- **Current state:** `POST /generate/assessment-transform` endpoint and its schemas (`AssessmentTransformRequest`, `AssessmentTransformResponse`) are retained as placeholders in the spec. They will be replaced once the new Workflow 2 contract is designed.
+- **Next step:** Await Template Pack from Project B for Workflow 2, or draft a proposal from Team A and validate with Prof. Shafae. Then replace placeholder endpoint/schemas.
 
 ### Assessment transform: batch (multiple questions)
 
-- **Status:** Deferred. Current contract supports a single question per request.
-- **Location:** `POST /generate/assessment-transform` — request has single `question` + `options`.
-- **Next step:** If batch is needed, introduce e.g. `questions: array` and a corresponding batch response shape; document in changelog as a non-breaking addition or new endpoint.
+- **Status:** Deferred, but now expected to be core to the new Workflow 2 scope (batch generation is the default behavior in the Assessment Generation Tool).
+- **Next step:** Will be addressed as part of the Workflow 2 contract redesign.
 
 ### Assessment transform: structured rubric
 
-- **Status:** Deferred. Response uses a single `rubric` string (e.g. markdown).
-- **Reason:** Structured rubric (criteria + performance levels) can be added once format is agreed (e.g. `rubricCriteria: array of { criterion, levels }`).
-- **Next step:** Define structured `RubricCriterion` (or similar) schema and add optional `rubricCriteria` to `AssessmentTransformResponse` in a future version.
+- **Status:** Deferred, but now explicitly required by the new Workflow 2 scope (criteria + performance levels).
+- **Next step:** Will be addressed as part of the Workflow 2 contract redesign.
+
+### `POST /retrieve` endpoint
+
+- **Status:** Deferred. Removed from spec in v0.2.0.
+- **Reason:** Retrieval happens internally in the RAG pipeline during generation. No current use case for a standalone public retrieval endpoint.
+- **Next step:** Re-evaluate if Team B needs direct OER search without generation.
+
+### `POST /telemetry/log` endpoint
+
+- **Status:** Deferred. Removed from spec in v0.2.0.
+- **Reason:** Engine logs telemetry internally. No current use case for a client-facing telemetry ingestion endpoint.
+- **Next step:** Re-evaluate if client-side metrics collection is needed.
+
+### Content catalog endpoint (`GET /content/structure`)
+
+- **Status:** Discussed but not yet added to spec.
+- **Reason:** The Engine should expose available book/chapter/section structure so Team B can populate dropdowns with valid values. For POC, this could be a static/hardcoded response.
+- **Next step:** Define schema and add endpoint when ingestion pipeline structure is finalized.
 
 ---
 
@@ -30,12 +61,18 @@ This document tracks fields, endpoints, and behaviors that are **explicitly defe
 
 ### Templates: what they are and who provides them
 
-- **What:** “Templates” are the Engine’s 2–3 approved, guardrailed recipe types (per Project A SOW), e.g. “Title/Chapter Q&A”, “Role/Scenario Coach”, “Instructor task assistant” (lesson outline, assessment transform, etc.).
-- **Who provides:** The **Engine (Project A)** defines and serves the list. The Dashboard (Project B) calls `GET /templates` to list available templates and then sends the chosen template id (or equivalent) when calling generate/transform endpoints.
-- **Open question:** Whether generation requests include a `templateId` explicitly or the endpoint implies the template (e.g. lesson-outline vs assessment-transform). Current design uses one endpoint per workflow; if we add multiple templates per workflow later, we may need `templateId` in the request.
+- **What:** "Templates" are the Engine's 2-3 approved, guardrailed recipe types (per Project A SOW), e.g. "Title/Chapter Q&A", "Role/Scenario Coach", "Instructor task assistant" (lesson outline, assessment transform, etc.).
+- **Who provides:** The **Engine (Project A)** defines and serves the list. The Dashboard (Project B) calls `GET /templates` to list available templates and then sends the chosen template id (or equivalent) when calling generate endpoints.
+- **Decision (v0.2.0):** Endpoint-path-based routing. No `templateId` or `workflow` field in request bodies. Each workflow has its own endpoint.
+
+### Quality checklists (Workflow 1 and Workflow 2)
+
+- **Decision (2026-02-25):** Checklists are evaluator-side documents derived from the Template Pack. Used during development sampling, sprint demos, and instructor pilot. Not exposed through the Engine API.
+- **Engine responsibility:** The Engine should produce structured output elements that the checklists reference (e.g. objective-to-content mappings, checks for understanding tied to objectives, activity time estimates, citations). The checklists evaluate whether these elements are present and adequate.
 
 ---
 
 ## Changelog
 
+- **2026-02-25:** Resolved `sections` deferred item (added `section`/`subSection` to request). Resolved `workflow` field routing decision. Deferred `POST /retrieve`, `POST /telemetry/log`, content catalog endpoint. Updated assessment deferred items to reflect Workflow 2 scope change. Added quality checklist clarification.
 - **2026-02-18:** Initial deferred list: sections, batch assessment, structured rubric; templates clarification.

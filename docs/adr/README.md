@@ -16,7 +16,7 @@ Where each ADR is reflected in the codebase:
 
 | ADR | Implementation |
 |-----|----------------|
-| **ADR-001** (LLM Provider) | `app/providers/llm/` — Protocol in `base.py`; stubs: `gemini.py`, `anthropic.py`. Provider/model selected via `LLM_PROVIDER`, `LLM_MODEL` env vars. |
+| **ADR-001** (LLM Provider) | `app/providers/llm/` — Protocol in `base.py`; skeleton classes: `anthropic.py`, `gemini.py`. `app/providers/embeddings/` — Protocol in `base.py`; skeleton classes: `voyage.py`, `gemini.py`. Factory functions in `app/providers/__init__.py` select provider via `LLM_PROVIDER` / `EMBEDDING_PROVIDER` env vars and validate API keys. Defaults: Anthropic (LLM) + Voyage (embeddings). |
 | **ADR-002** (Vector DB) | `app/db/vector/` — Protocol in `base.py`; stubs: `chroma.py`, `pgvector.py`. Selected via `VECTOR_DB_PROVIDER`. |
 | **ADR-003** (RAG Framework) | `app/core/rag/`, `app/core/ingestion/` — framework-agnostic; pipeline and service stubs ready for LangChain/custom/LlamaIndex. |
 | **ADR-004** (FastAPI) | `app/main.py`, `app/api/` — FastAPI app with health router. |

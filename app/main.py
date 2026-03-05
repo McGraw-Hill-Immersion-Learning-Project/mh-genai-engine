@@ -6,6 +6,7 @@ from functools import lru_cache
 from fastapi import FastAPI
 
 from app.api import health
+from app.api import generate
 from app.config import Settings
 from app.schemas.health import HealthResponse
 from app.api import retrieve
@@ -35,6 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(retrieve.router)
     app.include_router(templates.router)
     app.include_router(telemetry.router)
+    app.include_router(generate.generate_router)
     return app
 
 

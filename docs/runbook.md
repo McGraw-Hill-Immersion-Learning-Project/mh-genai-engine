@@ -6,15 +6,18 @@ How to run and deploy the Engine, and how secrets are managed. Per ADR-006: secr
 
 ## Required env vars
 
-None required for health check. See `.env.example` in repo root for all available vars. Credentials required only when using the corresponding provider (e.g. `GEMINI_API_KEY` when `LLM_PROVIDER=gemini`).
+None required for health check. See `.env.example` in repo root for all available vars. Credentials required only when using the corresponding provider (e.g. `ANTHROPIC_API_KEY` when `LLM_PROVIDER=anthropic`).
 
 | Variable | Purpose | Example / notes |
 |----------|---------|-----------------|
 | APP_ENV | Environment name | `development`, `staging`, `production` |
-| LLM_PROVIDER | LLM backend | `gemini`, `anthropic` |
-| LLM_MODEL | Model name | `gemini-3-flash-preview`, `claude-sonnet-4-6` |
-| GEMINI_API_KEY | Gemini API key | Required when using Gemini |
-| ANTHROPIC_API_KEY | Anthropic API key | Required when using Anthropic |
+| LLM_PROVIDER | LLM backend | `anthropic` (default), `gemini` |
+| LLM_MODEL | Model name | `claude-sonnet-4-6`, `gemini-3-flash-preview` |
+| EMBEDDING_PROVIDER | Embedding backend | `voyage` (default), `gemini` |
+| EMBEDDING_MODEL | Embedding model name | `voyage-3-large`, `text-embedding-004` |
+| ANTHROPIC_API_KEY | Anthropic API key | Required when `LLM_PROVIDER=anthropic` |
+| VOYAGE_API_KEY | Voyage AI API key | Required when `EMBEDDING_PROVIDER=voyage` |
+| GEMINI_API_KEY | Gemini API key | Required when using Gemini for LLM or embeddings |
 
 ---
 
@@ -61,4 +64,4 @@ None required for health check. See `.env.example` in repo root for all availabl
 
 ---
 
-*Last updated: 2026-02-23. Keep this doc in sync with the backend and deploy process.*
+*Last updated: 2026-03-04. Keep this doc in sync with the backend and deploy process.*

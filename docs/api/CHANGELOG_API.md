@@ -10,17 +10,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-02-25
+
 ### Added
+
+- `LessonOutlineRequest`: new fields `book`, `section`, `subSection`, `learningObjective` (singular string), `contentType` (enum: lecture_notes, ppt), `count` (integer), `audienceLevel` (enum: beginner, intermediate, advanced), `regeneratedResponse` (boolean, logging-only).
+- New `LogEntry` schema for internal workflow audit logging (not exposed as endpoint).
 
 ### Changed
 
-### Deprecated
+- `Citation` schema: now uses `title`, `page` (optional), `chapter`, `section`. Replaces previous `chapter`, `section`, `sourceId`, `excerpt`.
+- `POST /generate/assessment-transform`: added description noting Workflow 2 scope is being redesigned; endpoint and schemas retained as placeholders.
+- `TelemetryEvent` schema: added description clarifying it is used internally (no public endpoint currently).
 
 ### Removed
 
-### Fixed
+- `LessonOutlineRequest`: removed `learningObjectives` (array), `audience`, `tone`, `timeAllowed`, `externalResources`.
+- `POST /retrieve` endpoint and associated schemas (`RetrieveRequest`, `RetrieveResponse`, `RetrievedChunk`) — deferred, no current use case; retrieval happens internally in the RAG pipeline.
+- `POST /telemetry/log` endpoint — deferred, no current use case; Engine logs telemetry internally.
 
-### Security
+### Migration notes
+
+- **Breaking:** `LessonOutlineRequest` fields changed. Callers must update to use `learningObjective` (singular), `contentType`, `count`, `audienceLevel` instead of the removed fields.
+- **Breaking:** `Citation` schema fields changed. Callers must update to use `title`, `page`, `chapter`, `section` instead of `sourceId`, `excerpt`.
 
 ## [0.1.0] - 2026-02-18
 

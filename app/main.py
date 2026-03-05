@@ -7,11 +7,9 @@ from fastapi import FastAPI
 
 from app.api import health
 from app.api import generate
+from app.api import templates
 from app.config import Settings
 from app.schemas.health import HealthResponse
-from app.api import retrieve
-from app.api import templates
-from app.api import telemetry
 
 @lru_cache
 def get_settings() -> Settings:
@@ -33,9 +31,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     app.include_router(health.router)
-    app.include_router(retrieve.router)
     app.include_router(templates.router)
-    app.include_router(telemetry.router)
     app.include_router(generate.router)
     return app
 

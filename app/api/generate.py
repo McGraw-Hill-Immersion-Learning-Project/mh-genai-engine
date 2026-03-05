@@ -31,7 +31,7 @@ _MOCK_CITATIONS = [
 ]
 
 
-@generate_router.post("/generate/lesson-outline")
+@router.post("/generate/lesson-outline")
 def generate_lesson_outline(
     body: LessonOutlineRequest,
 ) -> LessonOutlineResponse:
@@ -84,7 +84,7 @@ def generate_lesson_outline(
     )
 
 
-@generate_router.post("/generate/assessment-transform")
+@router.post("/generate/assessment-transform")
 def generate_assessment_transform(
     body: AssessmentTransformRequest,
 ) -> AssessmentTransformResponse:

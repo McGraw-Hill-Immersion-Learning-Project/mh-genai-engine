@@ -36,7 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(retrieve.router)
     app.include_router(templates.router)
     app.include_router(telemetry.router)
-    app.include_router(generate.generate_router)
+    app.include_router(generate.router)
     return app
 
 

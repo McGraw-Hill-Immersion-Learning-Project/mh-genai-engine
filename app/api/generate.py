@@ -14,7 +14,7 @@ from app.models.generate import (
     LessonOutlineResponse,
 )
 
-generate_router = APIRouter(tags=["generate"])
+router = APIRouter(tags=["generate"])
 
 _MOCK_CITATIONS = [
     Citation(

@@ -1,14 +1,6 @@
 """Tests for POST /generate/lesson-outline and POST /generate/assessment-transform."""
 
-import pytest
 from fastapi.testclient import TestClient
-
-from app.main import app
-
-
-@pytest.fixture
-def client() -> TestClient:
-    return TestClient(app)
 
 
 VALID_LESSON_BODY = {

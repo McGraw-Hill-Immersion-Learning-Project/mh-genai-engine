@@ -6,6 +6,7 @@ from functools import lru_cache
 from fastapi import FastAPI
 
 from app.api import health
+from app.api import generate
 from app.config import Settings
 
 @lru_cache
@@ -28,6 +29,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     app.include_router(health.router)
+    app.include_router(generate.generate_router)
     return app
 
 

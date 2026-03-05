@@ -5,6 +5,7 @@
 **Textbook:** Principles of Economics (OpenStax)
 
 **File:** `data/raw/Economics_OER.pdf`
+**File Origin** https://openstax.org/details/books/principles-economics-3e
 
 **Source:** OpenStax (openstax.org) -- openly licensed under CC BY 4.0, free to use and redistribute.
 

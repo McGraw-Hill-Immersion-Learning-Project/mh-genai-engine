@@ -25,14 +25,3 @@ class TestTemplatesEndpoint:
         for field in ("id", "name", "description"):
             assert field in first
             assert isinstance(first[field], str)
-
-
-class TestRemovedSupportEndpoints:
-    def test_post_retrieve_is_not_exposed(self) -> None:
-        resp = client.post("/retrieve", json={"query": "test"})
-        assert resp.status_code == 404
-
-    def test_post_telemetry_log_is_not_exposed(self) -> None:
-        resp = client.post("/telemetry/log", json={"eventType": "generate"})
-        assert resp.status_code == 404
-

@@ -1,12 +1,12 @@
 openapi: 3.1.0
 info:
   title: MH GenAI Engine API
-  version: 0.1.0
+  version: 0.2.0
   description: |
     Versioned API for the MH GenAI Engine. Provides OER-grounded RAG,
     template-driven generation, guardrails, and telemetry.
     Authentication/authorization TBD (e.g. API key header).
-    Changelog: see docs/api/CHANGELOG_API.md. Deferred items and open questions: docs/API_DEFERRED_AND_NOTES.md.
+    Changelog: see docs/api/CHANGELOG_API.md. Deferred items and open questions: docs/api/API_DEFERRED_AND_NOTES.md.
 
 servers:
   - url: https://dev.mh-genai-engine.com/v0
@@ -52,6 +52,10 @@ paths:
   /generate/assessment-transform:
     post:
       summary: Transform an MCQ into an open-ended question + rubric
+      description: |
+        Workflow 2 scope is being redesigned (Assessment Generation Tool).
+        This endpoint and its schemas are retained as placeholders pending
+        the new Workflow 2 API contract.
       operationId: transformAssessment
       requestBody:
         required: true
@@ -66,42 +70,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssessmentTransformResponse"
-        "400":
-          description: Bad request (e.g. validation failed)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "401":
-          description: Unauthorized (auth TBD)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /retrieve:
-    post:
-      summary: Retrieve relevant OER chunks with citations
-      operationId: retrieveChunks
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RetrieveRequest"
-      responses:
-        "200":
-          description: Retrieved chunks
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RetrieveResponse"
         "400":
           description: Bad request (e.g. validation failed)
           content:
@@ -148,64 +116,53 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /telemetry/log:
-    post:
-      summary: Log usage/latency/error events
-      operationId: logTelemetry
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TelemetryEvent"
-      responses:
-        "204":
-          description: Logged successfully
-        "400":
-          description: Bad request (e.g. invalid payload)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "401":
-          description: Unauthorized (auth TBD)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
 components:
   schemas:
     LessonOutlineRequest:
       type: object
       properties:
+        book:
+          type: string
+          description: Book identifier (pre-selected for POC; only one book available)
         chapter:
           type: string
-          description: Chapter or content scope identifier (as produced by the ingestion pipeline)
-        learningObjectives:
-          type: array
-          items: { type: string }
-          description: Learning outcome statements to align the outline to
-        audience:
+          description: Chapter identifier (from content catalog / ingestion pipeline)
+        section:
           type: string
-          description: Target audience (e.g. "undergraduate", "first-year", "majors")
-        tone:
+          description: Section identifier within the chapter (optional content scoping)
+        subSection:
           type: string
-          description: Desired tone (e.g. "formal", "conversational", "technical")
-        timeAllowed:
+          description: Sub-section identifier within the section (optional content scoping)
+        learningObjective:
           type: string
-          description: Time budget for the lesson (e.g. "50 min", "1 hour")
-        externalResources:
+          description: Single learning objective statement provided by the instructor
+        contentType:
+          type: string
+          enum: [lecture_notes, ppt]
+          description: Output format — lecture notes (time-structured) or ppt (slide-structured outline)
+        count:
+          type: integer
+          description: |
+            Target output size. Interpretation depends on contentType:
+            when lecture_notes, this is duration in minutes;
+            when ppt, this is number of slides.
+        audienceLevel:
+          type: string
+          enum: [beginner, intermediate, advanced]
+          description: Target audience level
+        regeneratedResponse:
           type: boolean
           default: false
-          description: Whether to allow resources outside the selected OER (POC default off)
-      required: [chapter]
+          description: |
+            Logging-only flag. Set to true when the user is regenerating
+            (re-requesting with updated parameters). Does not change
+            generation behavior.
+      required:
+        - chapter
+        - learningObjective
+        - contentType
+        - count
+        - audienceLevel
 
     LessonOutlineResponse:
       type: object
@@ -231,12 +188,12 @@ components:
           description: Suggested in-class activity ideas, time-boxed (optional)
         slideOutline:
           type: string
-          description: Slide-by-slide or speaker-note scaffolding (optional)
+          description: Slide-by-slide or speaker-note scaffolding (populated when contentType is ppt)
         citations:
           type: array
           items:
             $ref: "#/components/schemas/Citation"
-          description: OER sources used to ground the outline (chapter/section + excerpt)
+          description: OER sources used to ground the outline
 
     AssessmentTransformRequest:
       type: object
@@ -276,61 +233,21 @@ components:
             $ref: "#/components/schemas/Citation"
           description: OER sources used to ground the transformation
 
-    RetrieveRequest:
-      type: object
-      properties:
-        query:
-          type: string
-          description: Search query (natural language or keywords)
-        chapter:
-          type: string
-          description: Optional; restrict retrieval to this chapter (content scope)
-        topK:
-          type: integer
-          default: 5
-          description: Maximum number of chunks to return (semantic similarity)
-      required: [query]
-
-    RetrieveResponse:
-      type: object
-      properties:
-        chunks:
-          type: array
-          items:
-            $ref: "#/components/schemas/RetrievedChunk"
-          description: Retrieved OER chunks with provenance metadata, ordered by relevance
-
-    RetrievedChunk:
-      type: object
-      properties:
-        text:
-          type: string
-          description: The chunk content (excerpt from OER)
-        chapter:
-          type: string
-          description: Chapter identifier for citation/provenance
-        section:
-          type: string
-          description: Section identifier within the chapter (if available)
-        score:
-          type: number
-          description: Relevance score (e.g. similarity score from vector search)
-
     Citation:
       type: object
       properties:
+        title:
+          type: string
+          description: Title of the cited source (e.g. book title)
+        page:
+          type: string
+          description: Page reference within the source (optional; may not be available for all OER formats)
         chapter:
           type: string
           description: Chapter where the cited content appears
         section:
           type: string
           description: Section within the chapter (if available)
-        sourceId:
-          type: string
-          description: Stable identifier for the source (e.g. chunk id from the index)
-        excerpt:
-          type: string
-          description: Short excerpt for tooltip/preview
 
     Template:
       type: object
@@ -354,8 +271,31 @@ components:
             $ref: "#/components/schemas/Template"
           description: List of Engine-approved templates (workflow types) available to callers
 
+    LogEntry:
+      type: object
+      description: |
+        Internal audit log entry. Logged by the Engine on every generate/regenerate
+        call. Not exposed as a public API endpoint; documented here for schema reference.
+      properties:
+        transactionTime:
+          type: string
+          format: date-time
+          description: When the transaction occurred (ISO 8601)
+        workflowType:
+          type: string
+          description: Which workflow was invoked (e.g. "lesson_outline", "assessment")
+        success:
+          type: boolean
+          description: Whether the generation succeeded
+        request:
+          type: object
+          description: Copy of the original request payload (for audit trail)
+
     TelemetryEvent:
       type: object
+      description: |
+        Operational telemetry event. Used internally for performance monitoring.
+        No public endpoint currently; documented here for schema reference.
       properties:
         eventType:
           type: string

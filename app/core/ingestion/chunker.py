@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+from app.config import Settings
 from app.core.ingestion.parser import ParsedDocument
 
 
@@ -23,10 +24,11 @@ class Chunk:
 class TextChunker:
     """Split text into overlapping chunks using recursive character splitting."""
 
-    def __init__(self, chunk_size: int = 500, overlap: int = 50):
+    def __init__(self, settings: Settings | None = None):
+        s = settings or Settings()
         self._splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=overlap,
+            chunk_size=s.chunk_size,
+            chunk_overlap=s.chunk_overlap,
             separators=["\n\n", "\n", ". ", " ", ""],
         )
 

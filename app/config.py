@@ -33,3 +33,7 @@ class Settings(BaseSettings):
     chroma_host: str | None = None
     chroma_port: int = 8000
     database_url: str = ""
+
+    # Ingestion config
+    chunk_size: int = 500
+    chunk_overlap: int = 50

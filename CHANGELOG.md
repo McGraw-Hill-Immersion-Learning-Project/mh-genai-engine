@@ -23,6 +23,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Unit test structure mirroring `app/`; health check test.
 - `.env.example` with provider/model selection vars (defaults: Anthropic + Voyage); `app/config.py` (pydantic-settings).
 - Runbook updated with local run steps.
+- `DocumentParser`: extracts per-page text, title, and TOC from PDFs via PyMuPDF; plain-text fallback for non-PDF files.
+- `TextChunker`: splits pages using `RecursiveCharacterTextSplitter`; resolves `chapter` and `section` from TOC by page number; every chunk carries `source_key`, `title`, `page_number`, `chapter`, `section`, `chunk_id`.
+- `chunk_size` and `chunk_overlap` added to `Settings` (configurable via `.env`).
+- `PyMuPDF==1.25.3` and `langchain-text-splitters==0.3.8` added to `requirements.txt`.
+- 17 unit tests for parser and chunker; synthetic PDF fixtures generated in-process via PyMuPDF conftest.
 
 ### Changed
 

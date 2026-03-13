@@ -6,12 +6,29 @@ import fitz  # PyMuPDF
 
 
 @dataclass
+class PageText:
+    """Text content of a single page."""
+
+    page_number: int  # 1-indexed physical page
+    text: str
+
+
+@dataclass
+class TocEntry:
+    """Single entry from the PDF table of contents."""
+
+    level: int   # 1 = chapter, 2 = section
+    title: str
+    page: int    # 1-indexed page where this heading starts
+
+
+@dataclass
 class ParsedDocument:
     """Output of parsing a document — per-page text plus PDF-level metadata."""
 
-    pages: list[dict]  # [{"page_number": int, "text": str}]
+    pages: list[PageText]
     title: str = ""
-    toc: list = field(default_factory=list)  # [[level, title, page_number], ...]
+    toc: list[TocEntry] = field(default_factory=list)
 
 
 class DocumentParser:
@@ -22,19 +39,21 @@ class DocumentParser:
         if key.lower().endswith(".pdf"):
             return self._parse_pdf(data)
         text = data.decode("utf-8", errors="replace")
-        return ParsedDocument(pages=[{"page_number": 1, "text": text}])
+        return ParsedDocument(pages=[PageText(page_number=1, text=text)])
 
     def _parse_pdf(self, data: bytes) -> ParsedDocument:
         """Extract per-page text, title, and TOC from PDF bytes using PyMuPDF.
 
         TOC is best-effort — returns empty list if the PDF has none.
         """
-        doc = fitz.open(stream=data, filetype="pdf")
-        title = doc.metadata.get("title", "")
-        toc = doc.get_toc()  # [[level, title, page_number], ...] or []
-        pages = [
-            {"page_number": i + 1, "text": page.get_text()}
-            for i, page in enumerate(doc)
-        ]
-        doc.close()
+        with fitz.open(stream=data, filetype="pdf") as doc:
+            title = doc.metadata.get("title", "")
+            toc = [
+                TocEntry(level=lvl, title=heading, page=pg)
+                for lvl, heading, pg in doc.get_toc()
+            ]
+            pages = [
+                PageText(page_number=i + 1, text=page.get_text())
+                for i, page in enumerate(doc)
+            ]
         return ParsedDocument(pages=pages, title=title, toc=toc)

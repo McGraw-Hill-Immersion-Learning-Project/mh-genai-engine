@@ -50,6 +50,52 @@ def sample_pdf_bytes() -> bytes:
 
 
 @pytest.fixture(scope="session")
+def sample_pdf_multi_chapter_bytes() -> bytes:
+    """Synthetic 4-page PDF with two chapters; Chapter 2 has no section on its first page."""
+    doc = fitz.open()
+
+    p1 = doc.new_page()
+    p1.insert_text(
+        (50, 72),
+        "Chapter 1: Supply and Demand\n\n"
+        "This chapter covers the basics of supply and demand in economics.",
+    )
+
+    p2 = doc.new_page()
+    p2.insert_text(
+        (50, 72),
+        "1.1 Introduction to Supply\n\n"
+        "Supply refers to the quantity of a good that producers are willing to sell.",
+    )
+
+    p3 = doc.new_page()
+    p3.insert_text(
+        (50, 72),
+        "Chapter 2: Markets\n\n"
+        "Markets bring together buyers and sellers to exchange goods and services.",
+    )
+
+    p4 = doc.new_page()
+    p4.insert_text(
+        (50, 72),
+        "2.1 Market Structures\n\n"
+        "Market structures range from perfect competition to monopoly.",
+    )
+
+    doc.set_toc([
+        [1, "Chapter 1: Supply and Demand", 1],
+        [2, "1.1 Introduction to Supply", 2],
+        [1, "Chapter 2: Markets", 3],
+        [2, "2.1 Market Structures", 4],
+    ])
+    doc.set_metadata({"title": "Multi-Chapter Textbook"})
+
+    data = doc.tobytes()
+    doc.close()
+    return data
+
+
+@pytest.fixture(scope="session")
 def sample_pdf_no_toc_bytes() -> bytes:
     """Synthetic 2-page PDF with no TOC bookmarks."""
     doc = fitz.open()

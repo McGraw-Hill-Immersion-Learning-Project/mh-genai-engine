@@ -14,7 +14,8 @@ None required for health check. See `.env.example` in repo root for all availabl
 | LLM_PROVIDER | LLM backend | `anthropic` (default), `gemini` |
 | LLM_MODEL | Model name | `claude-sonnet-4-6`, `gemini-3-flash-preview` |
 | EMBEDDING_PROVIDER | Embedding backend | `voyage` (default), `gemini` |
-| EMBEDDING_MODEL | Embedding model name | `voyage-3-large`, `text-embedding-004` |
+| EMBEDDING_MODEL | Embedding model name | `voyage-4-lite`, `voyage-3-large`, `text-embedding-004` |
+| DATABASE_URL | Postgres + pgvector connection | Required for ingestion; default: `postgresql://mhgenai:mhgenai@localhost:5432/mhgenai` |
 | ANTHROPIC_API_KEY | Anthropic API key | Required when `LLM_PROVIDER=anthropic` |
 | VOYAGE_API_KEY | Voyage AI API key | Required when `EMBEDDING_PROVIDER=voyage` |
 | GEMINI_API_KEY | Gemini API key | Required when using Gemini for LLM or embeddings |
@@ -31,9 +32,20 @@ None required for health check. See `.env.example` in repo root for all availabl
 ## Local run
 
 1. `cp .env.example .env` — copy template and set any values (optional for health check only)
-2. **Docker:** `docker compose up --build` — builds and runs the app on port 8000
-3. **No Docker:** `pip install -r requirements.txt` then `uvicorn app.main:app --reload`
-4. Verify: `curl http://localhost:8000/health` returns `{"status":"ok"}`
+2. **Vector DB (pgvector):** For ingestion, start Postgres with pgvector: `docker compose up db -d`. This runs Postgres on port 5432. Set `DATABASE_URL=postgresql://mhgenai:mhgenai@localhost:5432/mhgenai` in `.env` (or use the default).
+3. **Docker (full stack):** `docker compose up --build` — builds and runs the app + db on ports 8000 and 5432
+4. **No Docker:** `pip install -r requirements.txt` then `uvicorn app.main:app --reload`
+5. Verify: `curl http://localhost:8000/health` returns `{"status":"ok"}`
+
+### Running pgvector tests
+
+pgvector adapter tests require a running Postgres with the vector extension. With `docker compose up db` running and `DATABASE_URL` set:
+
+```bash
+pytest -m pgvector -v
+```
+
+Without `DATABASE_URL`, these tests are skipped.
 
 ---
 

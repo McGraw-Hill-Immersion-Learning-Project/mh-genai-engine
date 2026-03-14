@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     llm_provider: str = "anthropic"
     llm_model: str = "claude-sonnet-4-6"
     embedding_provider: str = "voyage"
-    embedding_model: str = "voyage-3-large"
-    vector_db_provider: str = "chroma"
+    embedding_model: str = "voyage-4-lite"
+    vector_db_provider: str = "pgvector"
     storage_provider: str = "local"
 
     # Credentials (empty = validated at provider init time)
@@ -29,11 +29,11 @@ class Settings(BaseSettings):
     s3_bucket: str = ""
     s3_region: str = "us-east-1"
 
-    # Vector DB config
-    chroma_host: str | None = None
-    chroma_port: int = 8000
-    database_url: str = ""
+    # Vector DB config (pgvector)
+    database_url: str = "postgresql://mhgenai:mhgenai@localhost:5432/mhgenai"
 
     # Ingestion config
     chunk_size: int = 500
     chunk_overlap: int = 50
+    embedding_batch_size: int = 64
+    embedding_dimensions: int = 1024  # voyage-4-lite default

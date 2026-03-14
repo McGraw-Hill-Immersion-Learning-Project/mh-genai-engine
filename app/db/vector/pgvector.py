@@ -137,11 +137,18 @@ class PgvectorStore:
         finally:
             await conn.close()
 
+        def _normalize_metadata(raw: str | dict | None) -> dict:
+            if raw is None:
+                return {}
+            if isinstance(raw, str):
+                return json.loads(raw) if raw else {}
+            return raw if isinstance(raw, dict) else {}
+
         return [
             {
                 "id": row["id"],
                 "content": row["content"],
-                "metadata": row["metadata"] or {},
+                "metadata": _normalize_metadata(row["metadata"]),
                 "distance": float(row["distance"]),
             }
             for row in rows

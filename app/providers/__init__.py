@@ -11,6 +11,8 @@ if TYPE_CHECKING:
     from app.config import Settings
     from app.providers.llm.base import LLMProvider
     from app.providers.embeddings.base import EmbeddingProvider
+    from app.providers.storage.base import StorageProvider
+    from app.db.vector.base import VectorStore
 
 
 def get_llm_provider(settings: Settings) -> LLMProvider:
@@ -74,4 +76,43 @@ def get_embedding_provider(settings: Settings) -> EmbeddingProvider:
 
     raise ValueError(
         f"Unknown embedding provider: {provider!r}. Supported: 'voyage', 'gemini'."
+    )
+
+
+def get_storage_provider(settings: Settings) -> StorageProvider:
+    """Return the storage provider configured in *settings*."""
+    provider = settings.storage_provider.lower()
+
+    if provider == "local":
+        from app.providers.storage.local import LocalStorageProvider
+
+        return LocalStorageProvider(base_path=settings.storage_local_path)
+
+    raise ValueError(
+        f"Unknown storage provider: {provider!r}. Supported: 'local'."
+    )
+
+
+def get_vector_store(settings: Settings) -> VectorStore:
+    """Return the vector store configured in *settings*.
+
+    Raises ``ValueError`` for an unknown provider or missing database_url.
+    """
+    provider = settings.vector_db_provider.lower()
+
+    if provider == "pgvector":
+        if not settings.database_url:
+            raise ValueError(
+                "DATABASE_URL is required when VECTOR_DB_PROVIDER=pgvector"
+            )
+        from app.db.vector.pgvector import PgvectorStore
+
+        return PgvectorStore(
+            database_url=settings.database_url,
+            table_name="chunks",
+            dimensions=settings.embedding_dimensions,
+        )
+
+    raise ValueError(
+        f"Unknown vector DB provider: {provider!r}. Supported: 'pgvector'."
     )

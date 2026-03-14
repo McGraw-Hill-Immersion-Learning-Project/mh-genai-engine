@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Annotated
 
 from pydantic import BaseModel, Field
 
@@ -31,25 +32,25 @@ class LessonOutlineRequest(BaseModel):
     book: str | None = None
     chapter: str
     section: str | None = None
-    sub_section: str | None = Field(None, alias="subSection")
-    learning_objective: str = Field(..., alias="learningObjective")
-    content_type: ContentType = Field(..., alias="contentType")
+    sub_section: Annotated[str | None, Field(alias="subSection")] = None
+    learning_objective: Annotated[str, Field(alias="learningObjective")]
+    content_type: Annotated[ContentType, Field(alias="contentType")]
     count: int
-    audience_level: AudienceLevel = Field(..., alias="audienceLevel")
-    regenerated_response: bool = Field(False, alias="regeneratedResponse")
+    audience_level: Annotated[AudienceLevel, Field(alias="audienceLevel")]
+    regenerated_response: Annotated[bool, Field(alias="regeneratedResponse")] = False
 
     model_config = {"populate_by_name": True}
 
 
 class LessonOutlineResponse(BaseModel):
     outline: str
-    key_concepts: list[str] | None = Field(None, alias="keyConcepts")
+    key_concepts: Annotated[list[str] | None, Field(alias="keyConcepts")] = None
     misconceptions: list[str] | None = None
-    checks_for_understanding: list[str] | None = Field(
-        None, alias="checksForUnderstanding"
-    )
-    activity_ideas: list[str] | None = Field(None, alias="activityIdeas")
-    slide_outline: str | None = Field(None, alias="slideOutline")
+    checks_for_understanding: Annotated[
+        list[str] | None, Field(alias="checksForUnderstanding")
+    ] = None
+    activity_ideas: Annotated[list[str] | None, Field(alias="activityIdeas")] = None
+    slide_outline: Annotated[str | None, Field(alias="slideOutline")] = None
     citations: list[Citation] = []
 
     model_config = {"populate_by_name": True, "by_alias": True}
@@ -58,15 +59,19 @@ class LessonOutlineResponse(BaseModel):
 class AssessmentTransformRequest(BaseModel):
     question: str
     options: list[str] = []
-    learning_objectives: list[str] = Field([], alias="learningObjectives")
+    learning_objectives: Annotated[
+        list[str], Field(alias="learningObjectives")
+    ] = []
 
     model_config = {"populate_by_name": True}
 
 
 class AssessmentTransformResponse(BaseModel):
-    open_ended_question: str = Field(..., alias="openEndedQuestion")
+    open_ended_question: Annotated[str, Field(alias="openEndedQuestion")]
     rubric: str
-    expected_response_outline: str = Field(..., alias="expectedResponseOutline")
+    expected_response_outline: Annotated[
+        str, Field(alias="expectedResponseOutline")
+    ]
     misconceptions: list[str] = []
     citations: list[Citation] = []
 

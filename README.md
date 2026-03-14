@@ -47,6 +47,8 @@ CHANGELOG.md             # General project changelog
 
 Run locally: `cp .env.example .env` then `docker compose up --build`. Verify: `curl http://localhost:8000/health`.
 
+**Tests (full coverage):** Start the DB with `docker compose up db -d`, ensure `.env` has `DATABASE_URL` (default in `.env.example`), then run `pytest`. See [docs/runbook.md](docs/runbook.md#testing-full-coverage-including-db) for details.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for issue/PR flow, changelog rules, and ADRs. In short: use the [issue templates](.github/ISSUE_TEMPLATE/), fill the [PR template](.github/PULL_REQUEST_TEMPLATE.md), and update the relevant changelog.

@@ -37,15 +37,25 @@ None required for health check. See `.env.example` in repo root for all availabl
 4. **No Docker:** `pip install -r requirements.txt` then `uvicorn app.main:app --reload`
 5. Verify: `curl http://localhost:8000/health` returns `{"status":"ok"}`
 
-### Running pgvector tests
+### Testing (full coverage including DB)
 
-pgvector adapter tests require a running Postgres with the vector extension. With `docker compose up db` running and `DATABASE_URL` set:
+To run **all** tests, including the pgvector adapter tests (4 tests that hit Postgres), do the following in order:
 
-```bash
-pytest -m pgvector -v
-```
+1. **Start the database:** From the repo root, run:
+   ```bash
+   docker compose up db -d
+   ```
+   Wait until Postgres is ready (a few seconds). Optionally check with `docker compose ps` (db should be “Up (healthy)”).
 
-Without `DATABASE_URL`, these tests are skipped.
+2. **Ensure `.env` has `DATABASE_URL`:** If you don’t have a `.env` file, run `cp .env.example .env`. The default `DATABASE_URL=postgresql://mhgenai:mhgenai@localhost:5432/mhgenai` works when the db container is running on port 5432.
+
+3. **Run the full test suite:** From the repo root:
+   ```bash
+   pytest
+   ```
+   Pytest loads `.env` automatically (see `tests/conftest.py`), so the pgvector tests will run and you should see **68 tests** (64 passed + 4 pgvector). If the db is not running or `DATABASE_URL` is missing, the 4 pgvector tests are **skipped** and you’ll see 64 passed, 4 skipped.
+
+To run only the pgvector tests: `pytest -m pgvector -v`.
 
 ---
 

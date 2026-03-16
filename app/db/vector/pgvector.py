@@ -94,6 +94,9 @@ class PgvectorStore:
             for i, (doc, emb, meta, doc_id) in enumerate(
                 zip(documents, embeddings, metadatas, ids)
             ):
+                # Postgres TEXT cannot store NUL bytes; sanitize content to avoid
+                # "invalid byte sequence for encoding \"UTF8\": 0x00" errors.
+                clean_doc = doc.replace("\x00", " ")
                 vector_str = _vector_to_str(emb)
                 await conn.execute(
                     f"""
@@ -105,7 +108,7 @@ class PgvectorStore:
                         metadata = EXCLUDED.metadata
                     """,
                     doc_id,
-                    doc,
+                    clean_doc,
                     vector_str,
                     json.dumps(meta),
                 )

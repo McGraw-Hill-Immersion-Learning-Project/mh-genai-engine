@@ -15,7 +15,8 @@ Content-grounded GenAI **Engine** (Project A) for McGraw Hill’s Instructor Too
 | [docs/api/openapi.yaml](docs/api/openapi.yaml) | Engine API contract (OpenAPI 3.1) — endpoints, request/response shapes, errors. |
 | [docs/api/CHANGELOG_API.md](docs/api/CHANGELOG_API.md) | API version history (Keep a Changelog). |
 | [docs/api/API_DEFERRED_AND_NOTES.md](docs/api/API_DEFERRED_AND_NOTES.md) | Deferred API items and open questions (e.g. `sections`, batch assessment, structured rubric). |
-| [docs/runbook.md](docs/runbook.md) | How to run locally, deploy, and manage secrets (ADR-006). |
+| [docs/runbook.md](docs/runbook.md) | How to run, deploy, and manage secrets (ADR-006). |
+| [docs/local-dev.md](docs/local-dev.md) | Local dev quickstart: API + ingestion (dev vs Voyage embeddings). |
 | [docs/adr/ADRs.md](docs/adr/ADRs.md) | Architecture decisions; [README](docs/adr/README.md) maps ADRs to implementation. |
 | [CHANGELOG.md](CHANGELOG.md) | Project changelog (app, infra, docs — not API contract). |
 | `docs/specs/` | SOW and charter PDFs (Project A, Project B, rolling plan). |
@@ -48,6 +49,8 @@ CHANGELOG.md             # General project changelog
 Run locally: `cp .env.example .env` then `docker compose up --build`. Verify: `curl http://localhost:8000/health`.
 
 **Tests (full coverage):** Start the DB with `docker compose up db -d`, ensure `.env` has `DATABASE_URL` (default in `.env.example`), then run `pytest`. See [docs/runbook.md](docs/runbook.md#testing-full-coverage-including-db) for details.
+
+**Ingest a sample chapter:** Put a PDF in `data/raw/`, then `python scripts/ingest.py run <filename>`. Use `python scripts/ingest.py list` to see files. Requires a running DB and either `VOYAGE_API_KEY` (production‑like) or the local dev embedding provider (`EMBEDDING_PROVIDER=dev`, no API key). See [local dev guide](docs/local-dev.md) and [runbook – Ingesting a sample book chapter](docs/runbook.md#ingesting-a-sample-book-chapter).
 
 ## Contributing
 

@@ -1,5 +1,6 @@
 """Application settings loaded from environment variables and .env file."""
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -36,4 +37,22 @@ class Settings(BaseSettings):
     chunk_size: int = 500
     chunk_overlap: int = 50
     embedding_batch_size: int = 64
+    embedding_batch_delay_seconds: float = 0  # set ~21 for Voyage free tier (3 RPM)
     embedding_dimensions: int = 1024  # voyage-4-lite default
+
+    # Dev embedding defaults (used when EMBEDDING_PROVIDER=dev)
+    dev_embedding_dimensions: int = 128
+    dev_embedding_batch_size: int = 512
+    dev_max_chunks: int = 0  # 0 = no cap
+
+    @model_validator(mode="after")
+    def _apply_dev_embedding_defaults(self) -> "Settings":
+        """Apply fast defaults when EMBEDDING_PROVIDER=dev."""
+        if self.embedding_provider.lower() == "dev":
+            self.embedding_dimensions = self.dev_embedding_dimensions
+            # Make dev runs fast by embedding in large batches.
+            if self.embedding_batch_size < self.dev_embedding_batch_size:
+                self.embedding_batch_size = self.dev_embedding_batch_size
+            # No need to delay for synthetic local embeddings.
+            self.embedding_batch_delay_seconds = 0
+        return self

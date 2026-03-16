@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from utils import make_pgvector_table_name
+
 if TYPE_CHECKING:
     from app.config import Settings
     from app.providers.llm.base import LLMProvider
@@ -54,6 +56,11 @@ def get_embedding_provider(settings: Settings) -> EmbeddingProvider:
     """
     provider = settings.embedding_provider.lower()
 
+    if provider == "dev":
+        from app.providers.embeddings.dev import DevEmbeddingProvider
+
+        return DevEmbeddingProvider(dimensions=settings.embedding_dimensions)
+
     if provider == "voyage":
         if not settings.voyage_api_key:
             raise ValueError("VOYAGE_API_KEY is required when EMBEDDING_PROVIDER=voyage")
@@ -75,7 +82,7 @@ def get_embedding_provider(settings: Settings) -> EmbeddingProvider:
         )
 
     raise ValueError(
-        f"Unknown embedding provider: {provider!r}. Supported: 'voyage', 'gemini'."
+        f"Unknown embedding provider: {provider!r}. Supported: 'dev', 'voyage', 'gemini'."
     )
 
 
@@ -107,9 +114,16 @@ def get_vector_store(settings: Settings) -> VectorStore:
             )
         from app.db.vector.pgvector import PgvectorStore
 
+        table_name = make_pgvector_table_name(
+            prefix="chunks",
+            embedding_provider=settings.embedding_provider,
+            embedding_model=settings.embedding_model,
+            embedding_dimensions=settings.embedding_dimensions,
+        )
+
         return PgvectorStore(
             database_url=settings.database_url,
-            table_name="chunks",
+            table_name=table_name,
             dimensions=settings.embedding_dimensions,
         )
 

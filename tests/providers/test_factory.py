@@ -10,6 +10,7 @@ from app.providers import (
     get_vector_store,
 )
 from app.db.vector.pgvector import PgvectorStore
+from app.providers.embeddings.dev import DevEmbeddingProvider
 from app.providers.embeddings.gemini import GeminiEmbeddingProvider
 from app.providers.embeddings.voyage import VoyageEmbeddingProvider
 from app.providers.llm.anthropic import AnthropicLLMProvider
@@ -70,6 +71,12 @@ class TestGetEmbeddingProvider:
     def test_returns_voyage_provider(self) -> None:
         provider = get_embedding_provider(_settings())
         assert isinstance(provider, VoyageEmbeddingProvider)
+
+    def test_returns_dev_provider(self) -> None:
+        provider = get_embedding_provider(
+            _settings(embedding_provider="dev", embedding_dimensions=16)
+        )
+        assert isinstance(provider, DevEmbeddingProvider)
 
     def test_returns_gemini_provider(self) -> None:
         provider = get_embedding_provider(

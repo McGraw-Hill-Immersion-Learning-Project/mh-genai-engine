@@ -1,7 +1,9 @@
 """pgvector adapter tests. Require Docker Postgres with pgvector."""
 
 import os
+from collections.abc import AsyncIterator
 
+import asyncpg
 import pytest
 
 from app.db.vector.pgvector import PgvectorStore
@@ -25,15 +27,25 @@ def db_url() -> str:
 
 
 @pytest.fixture
-def pgvector_store(db_url: str) -> PgvectorStore:
-    """PgvectorStore with unique table per test to avoid collisions."""
+async def pgvector_store(db_url: str) -> AsyncIterator[PgvectorStore]:
+    """PgvectorStore with unique table per test, cleaned up after."""
     import uuid
+
     table_name = f"chunks_test_{uuid.uuid4().hex[:8]}"
-    return PgvectorStore(
+    store = PgvectorStore(
         database_url=db_url,
         table_name=table_name,
         dimensions=8,
     )
+    try:
+        yield store
+    finally:
+        # Best-effort cleanup so the dev DB doesn't accumulate test tables.
+        conn = await asyncpg.connect(db_url)
+        try:
+            await conn.execute(f"DROP TABLE IF EXISTS {table_name}")
+        finally:
+            await conn.close()
 
 
 @pytest.mark.asyncio

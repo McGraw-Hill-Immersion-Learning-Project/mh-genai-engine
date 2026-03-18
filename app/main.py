@@ -10,6 +10,9 @@ from app.api import generate
 from app.api import templates
 from app.config import Settings
 from app.providers import get_vector_store
+from utils import get_logger
+
+logger = get_logger(__name__)
 
 @lru_cache
 def get_settings() -> Settings:
@@ -29,10 +32,10 @@ async def lifespan(app: FastAPI):
             vector_store = get_vector_store(settings)
             await vector_store.ensure_collection()
             await vector_store.ensure_index()
-    except Exception:
+    except Exception as e:
         # On startup we don't want to crash the entire app if the DB is
         # temporarily unavailable; ingestion will surface errors explicitly.
-        pass
+        logger.warning("DB init failed: %s", e)
 
     yield
 

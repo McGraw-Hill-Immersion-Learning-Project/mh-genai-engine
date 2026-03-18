@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     s3_region: str = "us-east-1"
 
     # Vector DB config (pgvector)
-    database_url: str = "postgresql://mhgenai:mhgenai@localhost:5432/mhgenai"
+    database_url: str = ""
 
     # Ingestion config
     chunk_size: int = 500
@@ -55,4 +55,10 @@ class Settings(BaseSettings):
                 self.embedding_batch_size = self.dev_embedding_batch_size
             # No need to delay for synthetic local embeddings.
             self.embedding_batch_delay_seconds = 0
+
+        if self.vector_db_provider.lower() == "pgvector" and not self.database_url:
+            raise ValueError(
+                "DATABASE_URL must be set when VECTOR_DB_PROVIDER=pgvector "
+                "(set it in your environment or .env; see .env.example)."
+            )
         return self

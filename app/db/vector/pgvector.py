@@ -6,6 +6,7 @@ import re
 import asyncpg
 
 from app.db.vector.base import VectorStore
+from utils import make_pgvector_index_name
 
 
 def _vector_to_str(embedding: list[float]) -> str:
@@ -55,7 +56,9 @@ class PgvectorStore:
 
     async def ensure_index(self) -> None:
         """Create HNSW cosine index if it does not exist."""
-        index_name = f"{self._table_name}_embedding_hnsw_idx"
+        index_name = make_pgvector_index_name(
+            table_name=self._table_name, suffix="embedding_hnsw_idx"
+        )
         conn = await asyncpg.connect(self._database_url)
         try:
             await conn.execute(

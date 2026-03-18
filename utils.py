@@ -43,3 +43,24 @@ def make_pgvector_table_name(
     # Ensure max identifier length (Postgres: 63 bytes). Our content is ASCII.
     return base[:63]
 
+
+def make_pgvector_index_name(*, table_name: str, suffix: str) -> str:
+    """Generate a safe Postgres index name for a given table.
+
+    Postgres identifiers are limited to 63 bytes. When the table name is already
+    at the limit, appending a suffix can overflow and cause DDL failures.
+
+    Strategy:
+    - Prefer a readable name: "{table_name}_{suffix}"
+    - If too long, truncate and append a stable short hash to avoid collisions.
+    """
+
+    base = f"{table_name}_{suffix}"
+    if len(base) <= 63:
+        return base
+
+    h = hashlib.sha256(base.encode("utf-8", "ignore")).hexdigest()[:8]
+    # Leave room for "_" + 8-char hash.
+    trimmed = base[: 63 - (1 + len(h))]
+    return f"{trimmed}_{h}"
+

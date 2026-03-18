@@ -13,8 +13,13 @@ None required for health check. See `.env.example` in repo root for all availabl
 | APP_ENV | Environment name | `development`, `staging`, `production` |
 | LLM_PROVIDER | LLM backend | `anthropic` (default), `gemini` |
 | LLM_MODEL | Model name | `claude-sonnet-4-6`, `gemini-3-flash-preview` |
-| EMBEDDING_PROVIDER | Embedding backend | `voyage` (default), `gemini` |
-| EMBEDDING_MODEL | Embedding model name | `voyage-3-large`, `text-embedding-004` |
+| EMBEDDING_PROVIDER | Embedding backend | `voyage` (default), `gemini`, `dev` (synthetic local) |
+| EMBEDDING_MODEL | Embedding model name | `voyage-4-lite`, `voyage-3-large`, `text-embedding-004`, `local-dev` |
+| EMBEDDING_DIMENSIONS | Vector size for pgvector | `1024` (voyage-4-lite). When `EMBEDDING_PROVIDER=dev`, this is overridden by `DEV_EMBEDDING_DIMENSIONS` for speed. |
+| DEV_EMBEDDING_DIMENSIONS | Dev embedding dimension | Default `128` (used only when `EMBEDDING_PROVIDER=dev`) |
+| DEV_EMBEDDING_BATCH_SIZE | Dev embedding batch size | Default `512` (used only when `EMBEDDING_PROVIDER=dev`) |
+| DEV_MAX_CHUNKS | Optional dev chunk cap | `0` = no cap; set e.g. `200` for very fast runs |
+| DATABASE_URL | Postgres + pgvector connection | Required for ingestion; default: `postgresql://mhgenai:mhgenai@localhost:5432/mhgenai` |
 | ANTHROPIC_API_KEY | Anthropic API key | Required when `LLM_PROVIDER=anthropic` |
 | VOYAGE_API_KEY | Voyage AI API key | Required when `EMBEDDING_PROVIDER=voyage` |
 | GEMINI_API_KEY | Gemini API key | Required when using Gemini for LLM or embeddings |
@@ -31,9 +36,72 @@ None required for health check. See `.env.example` in repo root for all availabl
 ## Local run
 
 1. `cp .env.example .env` — copy template and set any values (optional for health check only)
-2. **Docker:** `docker compose up --build` — builds and runs the app on port 8000
-3. **No Docker:** `pip install -r requirements.txt` then `uvicorn app.main:app --reload`
-4. Verify: `curl http://localhost:8000/health` returns `{"status":"ok"}`
+2. **Vector DB (pgvector):** For ingestion, start Postgres with pgvector: `docker compose up db -d`. This runs Postgres on port 5432. Set `DATABASE_URL=postgresql://mhgenai:mhgenai@localhost:5432/mhgenai` in `.env` (or use the default).
+3. **Docker (full stack):** `docker compose up --build` — builds and runs the app + db on ports 8000 and 5432
+4. **No Docker:** `pip install -r requirements.txt` then `uvicorn app.main:app --reload`
+5. Verify: `curl http://localhost:8000/health` returns `{"status":"ok"}`
+
+### Testing (full coverage including DB)
+
+To run **all** tests, including the pgvector adapter tests (4 tests that hit Postgres), do the following in order:
+
+1. **Start the database:** From the repo root, run:
+   ```bash
+   docker compose up db -d
+   ```
+   Wait until Postgres is ready (a few seconds). Optionally check with `docker compose ps` (db should be “Up (healthy)”).
+
+2. **Ensure `.env` has `DATABASE_URL`:** If you don’t have a `.env` file, run `cp .env.example .env`. The default `DATABASE_URL=postgresql://mhgenai:mhgenai@localhost:5432/mhgenai` works when the db container is running on port 5432.
+
+3. **Run the full test suite:** From the repo root:
+   ```bash
+   pytest
+   ```
+   Pytest loads `.env` automatically (see `tests/conftest.py`), so the pgvector tests will run and you should see **68 tests** (64 passed + 4 pgvector). If the db is not running or `DATABASE_URL` is missing, the 4 pgvector tests are **skipped** and you’ll see 64 passed, 4 skipped.
+
+To run only the pgvector tests: `pytest -m pgvector -v`.
+
+### Ingesting a sample book chapter
+
+To run the full pipeline (read → parse → chunk → embed → store) on a PDF:
+
+1. **Start the database** (if not already running): `docker compose up db -d`
+2. **Put a PDF in `data/raw/`** — e.g. download a chapter or use the Economics OER from the [ingestion plan](ingestion-plan.md). Example: `data/raw/Economics_Ch1.pdf`
+3. **Set env** — In `.env` you need at least:
+   - `DATABASE_URL=postgresql://mhgenai:mhgenai@localhost:5432/mhgenai`
+   - `VOYAGE_API_KEY=<your-key>` (used for embeddings)
+   - **Voyage free tier (3 RPM):** set `EMBEDDING_BATCH_SIZE=3` and `EMBEDDING_BATCH_DELAY_SECONDS=21` to avoid rate-limit errors.
+4. **Run the ingest CLI** from the repo root:
+   ```bash
+   python scripts/ingest.py run Economics_Ch1.pdf
+   ```
+   List available files: `python scripts/ingest.py list`. Help: `python scripts/ingest.py --help`.
+
+Re-running the same file is idempotent (existing chunks for that file are replaced). Each embedding configuration (provider/model/dimensions) writes to its own pgvector `chunks_*` table, so changing embedding configs does not mix data across different indexes.
+
+### Local dev embeddings (synthetic) — run ingest without Voyage
+
+To run ingestion **without any Voyage API key or external service**, use the synthetic dev embedding provider. It’s deterministic and optimized for speed; it is intended for local development and plumbing tests (not for evaluating retrieval quality).
+
+1. **Install dependencies** — from the repo root:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. **Start the database** (if not already running): `docker compose up db -d`
+3. **Configure `.env`** — Set:
+   - `EMBEDDING_PROVIDER=dev`
+   - `EMBEDDING_MODEL=local-dev`
+   - `DATABASE_URL=postgresql://mhgenai:mhgenai@localhost:5432/mhgenai`
+
+Optional speed knobs (dev only):
+- `DEV_EMBEDDING_DIMENSIONS=128`
+- `DEV_EMBEDDING_BATCH_SIZE=512`
+- `DEV_MAX_CHUNKS=200`
+
+4. **Run the ingest CLI**:
+   ```bash
+   python scripts/ingest.py run eepsam.pdf
+   ```
 
 ---
 

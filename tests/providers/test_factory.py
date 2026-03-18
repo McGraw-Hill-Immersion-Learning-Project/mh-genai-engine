@@ -3,11 +3,19 @@
 import pytest
 
 from app.config import Settings
-from app.providers import get_llm_provider, get_embedding_provider
+from app.providers import (
+    get_embedding_provider,
+    get_llm_provider,
+    get_storage_provider,
+    get_vector_store,
+)
+from app.db.vector.pgvector import PgvectorStore
+from app.providers.embeddings.dev import DevEmbeddingProvider
+from app.providers.embeddings.gemini import GeminiEmbeddingProvider
+from app.providers.embeddings.voyage import VoyageEmbeddingProvider
 from app.providers.llm.anthropic import AnthropicLLMProvider
 from app.providers.llm.gemini import GeminiLLMProvider
-from app.providers.embeddings.voyage import VoyageEmbeddingProvider
-from app.providers.embeddings.gemini import GeminiEmbeddingProvider
+from app.providers.storage.local import LocalStorageProvider
 
 
 def _settings(**overrides) -> Settings:
@@ -16,7 +24,7 @@ def _settings(**overrides) -> Settings:
         "llm_provider": "anthropic",
         "llm_model": "claude-sonnet-4-6",
         "embedding_provider": "voyage",
-        "embedding_model": "voyage-3-large",
+        "embedding_model": "voyage-4-lite",
         "anthropic_api_key": "sk-test",
         "voyage_api_key": "voy-test",
         "gemini_api_key": "",
@@ -64,6 +72,12 @@ class TestGetEmbeddingProvider:
         provider = get_embedding_provider(_settings())
         assert isinstance(provider, VoyageEmbeddingProvider)
 
+    def test_returns_dev_provider(self) -> None:
+        provider = get_embedding_provider(
+            _settings(embedding_provider="dev", embedding_dimensions=16)
+        )
+        assert isinstance(provider, DevEmbeddingProvider)
+
     def test_returns_gemini_provider(self) -> None:
         provider = get_embedding_provider(
             _settings(embedding_provider="gemini", gemini_api_key="gk-test")
@@ -87,3 +101,45 @@ class TestGetEmbeddingProvider:
     def test_provider_name_is_case_insensitive(self) -> None:
         provider = get_embedding_provider(_settings(embedding_provider="Voyage"))
         assert isinstance(provider, VoyageEmbeddingProvider)
+
+
+# ── get_storage_provider ────────────────────────────────────────────
+
+
+class TestGetStorageProvider:
+    def test_returns_local_provider(self) -> None:
+        provider = get_storage_provider(_settings())
+        assert isinstance(provider, LocalStorageProvider)
+
+    def test_raises_for_unknown_provider(self) -> None:
+        with pytest.raises(ValueError, match="Unknown storage provider"):
+            get_storage_provider(_settings(storage_provider="s3"))
+
+
+# ── get_vector_store ────────────────────────────────────────────────
+
+
+class TestGetVectorStore:
+    def test_returns_pgvector_store(self) -> None:
+        store = get_vector_store(
+            _settings(
+                vector_db_provider="pgvector",
+                database_url="postgresql://u:p@localhost:5432/db",
+            )
+        )
+        assert isinstance(store, PgvectorStore)
+
+    def test_raises_for_unknown_provider(self) -> None:
+        with pytest.raises(ValueError, match="Unknown vector DB provider"):
+            get_vector_store(
+                _settings(
+                    vector_db_provider="chroma",
+                    database_url="postgresql://u:p@localhost:5432/db",
+                )
+            )
+
+    def test_raises_when_database_url_missing(self) -> None:
+        with pytest.raises(ValueError, match="DATABASE_URL"):
+            get_vector_store(
+                _settings(vector_db_provider="pgvector", database_url="")
+            )

@@ -3,6 +3,8 @@
 import pytest
 import fitz  # PyMuPDF
 
+from tests.mocks import FakeEmbeddingProvider, InMemoryVectorStore
+
 
 @pytest.fixture(scope="session")
 def sample_pdf_bytes() -> bytes:
@@ -111,3 +113,46 @@ def sample_pdf_no_toc_bytes() -> bytes:
     data = doc.tobytes()
     doc.close()
     return data
+
+
+# ── Service integration test fixtures ─────────────────────────────────────
+
+
+class FakeStorageProvider:
+    """Serves preloaded bytes by key. For testing without filesystem."""
+
+    def __init__(self, files: dict[str, bytes]) -> None:
+        self._files = dict(files)
+
+    async def get(self, key: str) -> bytes:
+        if key not in self._files:
+            raise FileNotFoundError(f"File not found: {key}")
+        return self._files[key]
+
+    async def list_files(self, prefix: str = "") -> list[str]:
+        return [k for k in self._files if k.startswith(prefix)]
+
+    async def put(self, key: str, data: bytes) -> None:
+        self._files[key] = data
+
+    async def delete(self, key: str) -> None:
+        if key in self._files:
+            del self._files[key]
+
+
+@pytest.fixture
+def fake_embedder() -> FakeEmbeddingProvider:
+    """Embedding provider that returns zero vectors (no API calls)."""
+    return FakeEmbeddingProvider(dimensions=8)
+
+
+@pytest.fixture
+def in_memory_store() -> InMemoryVectorStore:
+    """In-memory vector store for integration tests."""
+    return InMemoryVectorStore()
+
+
+@pytest.fixture
+def fake_storage(sample_pdf_bytes: bytes) -> FakeStorageProvider:
+    """Storage provider that serves the sample PDF."""
+    return FakeStorageProvider({"sample.pdf": sample_pdf_bytes})

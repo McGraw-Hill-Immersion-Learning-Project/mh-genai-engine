@@ -1,1 +1,1 @@
-"""ChromaDB vector store (Sprint 1-2). Stub — implement when needed."""
+"""ChromaDB vector store. Not used — this project uses pgvector only."""

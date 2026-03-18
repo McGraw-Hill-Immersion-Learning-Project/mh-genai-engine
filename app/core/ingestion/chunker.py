@@ -19,6 +19,17 @@ class Chunk:
     chapter: str        # level-1 TOC heading covering this page (empty if no TOC)
     section: str        # level-2 TOC heading covering this page (empty if no TOC)
 
+    def to_metadata(self) -> dict:
+        """Return provenance metadata as a dict for vector store storage."""
+        return {
+            "source_key": self.source_key,
+            "title": self.title,
+            "page_number": self.page_number,
+            "chapter": self.chapter,
+            "section": self.section,
+            "chunk_id": self.chunk_id,
+        }
+
 
 class TextChunker:
     """Split text into overlapping chunks using recursive character splitting."""

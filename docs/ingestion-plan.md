@@ -72,8 +72,10 @@ PDF / TXT file (storage)
         |
    Embedding Provider    -- batched (default batch size 64) to minimize API round-trips
         |
-   Vector Store          -- PostgreSQL + pgvector, HNSW cosine index
+   Vector Store          -- pgvector (PostgreSQL + vector extension), HNSW cosine index
 ```
+
+**Vector store:** pgvector is the sole vector store. Local dev uses Docker: `docker compose up db` starts Postgres with pgvector. See `docs/runbook.md` for setup.
 
 ## 6. Test Strategy
 

@@ -6,5 +6,6 @@ venv/
 __pycache__/
 data/raw/*
 !data/raw/.gitkeep
+!data/raw/eepsam.pdf
 data/processed/*
 !data/processed/.gitkeep

@@ -1,6 +1,6 @@
 System Prompt 1: 
 
-Book: https://openstax.org/books/principles-economics-3e/pages/1-introduction
+Book: (Insert book title here) 
 
 Lecture scaffold chapter(s): (ex. 1)
 

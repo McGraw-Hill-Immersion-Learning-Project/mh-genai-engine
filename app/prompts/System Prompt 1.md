@@ -1,9 +1,15 @@
 System Prompt 1: 
+
 Book: https://openstax.org/books/principles-economics-3e/pages/1-introduction
+
 Lecture scaffold chapter(s): (ex. 1)
+
 Task: I want an outline, core key concepts of the chapter, common misconceptions, some checks for understanding, activity ideas and citations of where you got the information for each of the receivables.
+
 Context: (ex. 3rd Year University Students)
+
 Constraints :(ex. I only want 2 activities), I solely want what I asked and nothing else added and I want it formatted in such a way that I can copy paste it easily.
+
 I want to mimic this model result:
 •	General outline of the chapter specified
 •	The core concepts for each subsection of the chapter
@@ -11,6 +17,7 @@ I want to mimic this model result:
 •	Checks for understanding
 •	Activity Ideas
 •	Citations
+
 Effective reasoning per part: 
 Book - For testing purposes I incorporated this section of the prompt but it may prove useful to keep this if there are multiple books in a given prompt.
 Lecture Scaffold Chapter(s) – This will typically inform the chapter for the single book that is added. This may need to be updated if we do end up doing multiple books in one prompt.

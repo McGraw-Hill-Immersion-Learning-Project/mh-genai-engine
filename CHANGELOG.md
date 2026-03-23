@@ -31,6 +31,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- `DocumentParser` now uses Docling (standard pipeline) instead of PyMuPDF for PDF parsing. Docling performs layout analysis to produce structured Markdown (headings, tables, lists) per page rather than raw flat text, improving chunk quality for RAG retrieval.
+- TOC is now inferred from visual `SECTION_HEADER` items (levels 1–2) detected by Docling rather than embedded PDF bookmarks, which are frequently absent in OER PDFs.
+- PDF metadata title is read via `pypdfium2` (Docling transitive dep) since Docling does not surface embedded metadata directly.
+- `docling>=2.81.0` added to `requirements.txt`.
+- Chunker TOC resolution tests decoupled from the parser — they now construct `ParsedDocument` directly, making chunker logic independent of Docling's visual heading inference.
+
+### Changed
+
 ### Deprecated
 
 ### Removed

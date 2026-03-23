@@ -42,7 +42,9 @@ class LessonOutlineRequest(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class LessonOutlineResponse(BaseModel):
+class LessonOutlineGeneratedBody(BaseModel):
+    """Fields produced by the LLM as JSON (no citations — those come from retrieval)."""
+
     outline: str
     key_concepts: Annotated[list[str] | None, Field(alias="keyConcepts")] = None
     misconceptions: list[str] | None = None
@@ -51,6 +53,13 @@ class LessonOutlineResponse(BaseModel):
     ] = None
     activity_ideas: Annotated[list[str] | None, Field(alias="activityIdeas")] = None
     slide_outline: Annotated[str | None, Field(alias="slideOutline")] = None
+
+    model_config = {"populate_by_name": True}
+
+
+class LessonOutlineResponse(LessonOutlineGeneratedBody):
+    """API / pipeline response: generated body plus grounded citations."""
+
     citations: list[Citation] = []
 
     model_config = {"populate_by_name": True, "by_alias": True}

@@ -61,6 +61,8 @@ Each chunk stored in pgvector carries the following metadata:
 
 **TOC resolution:** `chapter` and `section` are derived at ingest time using the PDF's table of contents. For each chunk, its physical page number is used to look up the most recent chapter and section heading that started on or before that page. If the PDF has no TOC, both fields are left empty.
 
+**Query-time RAG (downstream):** Lesson-outline generation applies **metadata filters** on the vector store using `chapter` (exact), `section` (exact), `sub_section` (prefix match on stored `section` label), and `book` (case-insensitive substring on `title`). Catalog / Dashboard values for `LessonOutlineRequest` should align with how TOC text is stored in `metadata` (mismatches yield zero retrieved chunks). Semantic retrieval uses a separate embed string built from the learning objective and pedagogy hints, not from chapter labels alone.
+
 ## 5. Ingestion Pipeline Overview
 
 ```

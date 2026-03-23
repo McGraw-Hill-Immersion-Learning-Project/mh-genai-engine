@@ -16,6 +16,10 @@ paths:
   /generate/lesson-outline:
     post:
       summary: Generate a lesson outline grounded in OER content
+      description: |
+        Contract and response shape for lesson-outline generation. **Current Engine behavior:**
+        the HTTP implementation may return **mock** data for integration testing until the route is
+        wired to the in-process RAG pipeline (`LessonOutlinePipeline`). See `docs/api/API_DEFERRED_AND_NOTES.md`.
       operationId: generateLessonOutline
       requestBody:
         required: true

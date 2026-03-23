@@ -10,7 +10,7 @@ from app.core.rag.retriever import RetrievedChunk
 
 
 def _load_template() -> str:
-    path = Path(__file__).resolve().parent / "default_lesson_outline.md"
+    path = Path(__file__).resolve().parent / "templates/default_lesson_outline.md"
     return path.read_text(encoding="utf-8")
 
 

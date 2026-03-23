@@ -28,5 +28,8 @@ class LessonOutlinePromptStrategy(Protocol):
         request: LessonOutlineRequest,
         chunks: list[RetrievedChunk],
     ) -> list[dict[str, str]]:
-        """Return OpenAI-style messages: ``role`` + ``content``."""
+        """Return chat turns for :meth:`app.providers.llm.base.LLMProvider.complete`.
+
+        Same provider-agnostic contract: ``role`` and ``content`` strings per turn.
+        """
         ...

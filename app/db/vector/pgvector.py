@@ -6,12 +6,20 @@ import re
 import asyncpg
 
 from app.db.vector.base import VectorStore
+from app.db.vector.filters import VectorMetadataFilter
 from utils import make_pgvector_index_name
 
 
 def _vector_to_str(embedding: list[float]) -> str:
     """Format embedding list as PostgreSQL vector literal."""
     return "[" + ",".join(str(x) for x in embedding) + "]"
+
+
+def _escape_like_prefix(pattern: str) -> str:
+    """Escape ``%``, ``_``, ``\\`` for use in ``LIKE pat || '%' ESCAPE '\\'``."""
+    return (
+        pattern.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    )
 
 
 def _validate_table_name(name: str) -> None:
@@ -124,22 +132,58 @@ class PgvectorStore:
         self,
         embedding: list[float],
         n_results: int = 10,
+        *,
+        metadata_filter: VectorMetadataFilter | None = None,
     ) -> list[dict]:
         """Query by embedding vector. Return list of matches with metadata."""
         vector_str = _vector_to_str(embedding)
         conn = await asyncpg.connect(self._database_url)
         try:
-            rows = await conn.fetch(
-                f"""
+            where_parts: list[str] = ["TRUE"]
+            bind_args: list[object] = [vector_str, n_results]
+            i = 3
+
+            if metadata_filter is not None and metadata_filter.has_any():
+                if metadata_filter.chapter is not None and str(
+                    metadata_filter.chapter
+                ).strip():
+                    where_parts.append(f"metadata->>'chapter' = ${i}")
+                    bind_args.append(metadata_filter.chapter)
+                    i += 1
+                if metadata_filter.section is not None and str(
+                    metadata_filter.section
+                ).strip():
+                    where_parts.append(f"metadata->>'section' = ${i}")
+                    bind_args.append(metadata_filter.section)
+                    i += 1
+                if metadata_filter.sub_section is not None and str(
+                    metadata_filter.sub_section
+                ).strip():
+                    esc = _escape_like_prefix(metadata_filter.sub_section)
+                    where_parts.append(
+                        f"(metadata->>'section' LIKE ${i} || '%' ESCAPE E'\\\\')"
+                    )
+                    bind_args.append(esc)
+                    i += 1
+                if metadata_filter.book is not None and str(
+                    metadata_filter.book
+                ).strip():
+                    where_parts.append(
+                        f"POSITION(LOWER(${i}) IN LOWER(COALESCE(metadata->>'title', ''))) > 0"
+                    )
+                    bind_args.append(metadata_filter.book)
+                    i += 1
+
+            where_sql = " AND ".join(where_parts)
+            sql = f"""
                 SELECT id, content, metadata,
                        embedding <=> $1::vector AS distance
                 FROM {self._table_name}
+                WHERE {where_sql}
                 ORDER BY embedding <=> $1::vector
                 LIMIT $2
-                """,
-                vector_str,
-                n_results,
-            )
+                """
+            rows = await conn.fetch(sql, *bind_args)
         finally:
             await conn.close()
 

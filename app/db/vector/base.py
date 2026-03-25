@@ -2,6 +2,8 @@
 
 from typing import Protocol
 
+from app.db.vector.filters import VectorMetadataFilter
+
 
 class VectorStore(Protocol):
     """Protocol for vector storage. Implementation: pgvector."""
@@ -19,8 +21,14 @@ class VectorStore(Protocol):
         self,
         embedding: list[float],
         n_results: int = 10,
+        *,
+        metadata_filter: VectorMetadataFilter | None = None,
     ) -> list[dict]:
-        """Query by embedding vector. Return list of matches with metadata."""
+        """Query by embedding vector. Return list of matches with metadata.
+
+        When *metadata_filter* is set and ``has_any()``, only rows whose JSON
+        metadata satisfy all provided constraints are considered.
+        """
         ...
 
     async def delete(self, ids: list[str]) -> None:

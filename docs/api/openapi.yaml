@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MH GenAI Engine API
-  version: 0.2.0
+  version: 0.3.0
   description: |
     Versioned API for the MH GenAI Engine. Provides OER-grounded RAG,
     template-driven generation, guardrails, and telemetry.
@@ -93,22 +93,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /templates:
+  /templates/{workflow}:
     get:
-      summary: List available templates
+      summary: List templates for a workflow
       description: |
-        Returns the Engine's approved template set (e.g. lesson outline, assessment transform).
-        Provided by the Engine (Project A); Dashboard uses this to offer workflow options.
-      operationId: listTemplates
+        Returns Engine-approved **prompt template** ids for one workflow. Each item's ``id`` is a
+        stable kebab-case string: use ``lesson-outline`` ids as ``template`` on
+        ``POST /generate/lesson-outline``. Assessment-transform ids are reserved for Workflow 2 when
+        a template field is added there.
+      operationId: listTemplatesByWorkflow
+      parameters:
+        - name: workflow
+          in: path
+          required: true
+          description: Workflow slug
+          schema:
+            type: string
+            enum: [lesson-outline, assessment-transform]
       responses:
         "200":
-          description: Template list
+          description: Template list for the requested workflow
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/TemplateList"
         "401":
           description: Unauthorized (auth TBD)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Unknown workflow path value
           content:
             application/json:
               schema:
@@ -161,6 +177,14 @@ components:
             Logging-only flag. Set to true when the user is regenerating
             (re-requesting with updated parameters). Does not change
             generation behavior.
+        template:
+          type: string
+          default: default
+          enum: [default, lecture-scaffold-one-shot]
+          description: |
+            Prompt template variant (kebab-case). Must match an ``id`` from
+            ``GET /templates/lesson-outline``. The Engine maps this to the system prompt;
+            clients do not send prompt text.
       required:
         - chapter
         - learningObjective
@@ -273,7 +297,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Template"
-          description: List of Engine-approved templates (workflow types) available to callers
+          description: |
+            Templates for the requested workflow only. Each ``id`` is kebab-case and stable for API use.
 
     LogEntry:
       type: object

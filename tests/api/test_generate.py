@@ -79,6 +79,21 @@ class TestLessonOutline:
         resp = client.post("/generate/lesson-outline", json=body)
         assert resp.status_code == 200
 
+    def test_template_default_accepted(self, client: TestClient) -> None:
+        body = {**VALID_LESSON_BODY, "template": "default"}
+        resp = client.post("/generate/lesson-outline", json=body)
+        assert resp.status_code == 200
+
+    def test_template_lecture_scaffold_one_shot_accepted(self, client: TestClient) -> None:
+        body = {**VALID_LESSON_BODY, "template": "lecture-scaffold-one-shot"}
+        resp = client.post("/generate/lesson-outline", json=body)
+        assert resp.status_code == 200
+
+    def test_rejects_unknown_template(self, client: TestClient) -> None:
+        body = {**VALID_LESSON_BODY, "template": "not-a-real-template"}
+        resp = client.post("/generate/lesson-outline", json=body)
+        assert resp.status_code == 422
+
 
 # ── assessment-transform ────────────────────────────────────────
 

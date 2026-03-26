@@ -5,7 +5,7 @@ import tempfile
 from collections import defaultdict
 from dataclasses import dataclass, field
 
-import pypdfium2 as pdfium
+import pypdfium2 as pdfium  # used only to read embedded PDF title metadata; Docling does not surface it
 from docling.document_converter import DocumentConverter
 from docling_core.types.doc import DocItemLabel, SectionHeaderItem, TableItem, TextItem
 
@@ -79,25 +79,31 @@ class DocumentParser:
         toc: list[TocEntry] = []
 
         for item, _ in doc.iterate_items():
+            # skip items with no page provenance (e.g. document-level metadata)
             if not item.prov:
                 continue
             page_no = item.prov[0].page_no
 
             if item.label == DocItemLabel.TITLE:
+                # document title — render as top-level heading on its page
                 pages_content[page_no].append(f"# {item.text}")
 
             elif item.label == DocItemLabel.SECTION_HEADER and isinstance(item, SectionHeaderItem):
+                # section heading — render with correct Markdown depth and record in TOC
                 heading_prefix = "#" * item.level
                 pages_content[page_no].append(f"{heading_prefix} {item.text}")
-                if item.level <= 2:
+                if item.level <= 2:  # only chapter (1) and section (2) headings go in the TOC
                     toc.append(TocEntry(level=item.level, title=item.text, page=page_no))
 
             elif item.label == DocItemLabel.TABLE and isinstance(item, TableItem):
+                # export tables as Markdown so the chunker sees structured rows
                 pages_content[page_no].append(item.export_to_markdown(doc))
 
             elif isinstance(item, TextItem) and item.text.strip():
+                # plain paragraph text
                 pages_content[page_no].append(item.text)
 
+        # assemble per-page objects, sorted by page number, skipping blank pages
         pages = [
             PageText(page_number=pg, text="\n\n".join(parts))
             for pg, parts in sorted(pages_content.items())

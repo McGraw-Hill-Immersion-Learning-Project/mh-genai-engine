@@ -1,23 +1,38 @@
 """FastAPI application entry point."""
 
+import logging
+import os
 from contextlib import asynccontextmanager
-from functools import lru_cache
 
 from fastapi import FastAPI
 
 from app.api import health
 from app.api import generate
 from app.api import templates
-from app.config import Settings
+from app.deps import get_settings
 from app.providers import get_vector_store
-from utils import get_logger
+from app.utils import get_logger
 
 logger = get_logger(__name__)
 
-@lru_cache
-def get_settings() -> Settings:
-    """Load settings from env and .env."""
-    return Settings()
+
+def _configure_logging() -> None:
+    """Attach a stderr handler for all ``app.*`` loggers (uvicorn often leaves app loggers quiet).
+
+    ``LOG_LEVEL`` env (default ``INFO``): use ``DEBUG`` for verbose traces (e.g. full RAG prompts).
+    """
+    level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    app_log = logging.getLogger("app")
+    app_log.setLevel(level)
+    if not app_log.handlers:
+        handler = logging.StreamHandler()
+        handler.setLevel(level)
+        handler.setFormatter(
+            logging.Formatter("%(levelname)s [%(name)s] %(message)s")
+        )
+        app_log.addHandler(handler)
+    app_log.propagate = False
 
 
 @asynccontextmanager
@@ -52,5 +67,7 @@ def create_app() -> FastAPI:
     app.include_router(generate.router)
     return app
 
+
+_configure_logging()
 
 app = create_app()

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from utils import make_pgvector_table_name
+from app.utils import make_pgvector_table_name
 
 if TYPE_CHECKING:
     from app.config import Settings

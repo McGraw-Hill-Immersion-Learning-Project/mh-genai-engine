@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from app.core.ingestion.chunker import Chunk, TextChunker
 from app.core.ingestion.parser import DocumentParser, ParsedDocument
-from utils import get_logger
+from app.utils import get_logger
 
 logger = get_logger(__name__)
 

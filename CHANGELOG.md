@@ -10,8 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **`LessonOutlineRequest.template`:** optional kebab-case prompt variant id (default `default`); validated against the lesson-outline template catalog in `app/core/rag/prompts/registry.py`. Use `get_lesson_outline_strategy_by_template_id` when wiring RAG to select the system prompt.
+
 ### Changed
 
+- **Templates HTTP API (breaking):** `GET /templates` removed in favor of `GET /templates/{workflow}` with `workflow` ∈ `lesson-outline` | `assessment-transform`. Lesson-outline template ids exposed to clients: `default`, `lecture-scaffold-one-shot`.
+- **`app/core/rag/__init__.py`:** no longer re-exports pipeline types at package import (avoids import cycles with `app.models.generate`); import from submodules (e.g. `app.core.rag.generator`).
 - **RAG lesson-outline prompts:** `template_strategy.py` implements `TemplatedLessonOutlineStrategy` (markdown templates + `str.format()` for request fields and `{retrieved_context}`). Templates live under `app/core/rag/prompts/templates/`. `get_lesson_outline_strategy(style_id)` registry: `default` → `default_lesson_outline.md`, `lecture_scaffold_one_shot` → `lecture_scaffold_one_shot.md` (research-backed variant; see `templates/System Prompt 1.md`).
 
 ### Added

@@ -11,7 +11,10 @@ from app.models.generate import (
 )
 from app.core.rag.generator import Generator, citations_from_chunks
 from app.core.rag.prompts.template_strategy import TemplatedLessonOutlineStrategy
-from app.core.rag.prompts.registry import get_lesson_outline_strategy
+from app.core.rag.prompts.registry import (
+    get_lesson_outline_strategy,
+    get_lesson_outline_strategy_by_template_id,
+)
 from app.core.rag.retriever import RetrievedChunk
 
 from tests.mocks import FakeLLMProvider
@@ -141,3 +144,18 @@ def test_lecture_scaffold_one_shot_injects_request_and_context() -> None:
 def test_get_lesson_outline_strategy_unknown_raises() -> None:
     with pytest.raises(ValueError, match="Unknown lesson outline style"):
         get_lesson_outline_strategy("nope")
+
+
+def test_get_lesson_outline_strategy_by_template_id_default() -> None:
+    s = get_lesson_outline_strategy_by_template_id("default")
+    assert s.build_messages is not None
+
+
+def test_get_lesson_outline_strategy_by_template_id_lecture_scaffold() -> None:
+    s = get_lesson_outline_strategy_by_template_id("lecture-scaffold-one-shot")
+    assert s.build_messages is not None
+
+
+def test_get_lesson_outline_strategy_by_template_id_unknown_raises() -> None:
+    with pytest.raises(ValueError, match="Unknown lesson outline template"):
+        get_lesson_outline_strategy_by_template_id("lecture_scaffold_one_shot")

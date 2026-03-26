@@ -31,6 +31,7 @@ app/                     # FastAPI backend
   providers/             # LLM, embeddings, storage adapters
   db/                    # Vector store (pgvector; optional metadata filters on query)
   models/                # Pydantic schemas
+  deps.py                # FastAPI dependencies (settings, retriever, LLM)
   config.py              # Settings from .env
 data/                    # Document storage: raw/, processed/, samples/
 docs/
@@ -50,7 +51,7 @@ Run locally: `cp .env.example .env` then `docker compose up --build`. Verify: `c
 
 **Tests (full coverage):** Start the DB with `docker compose up db -d`, ensure `.env` has `DATABASE_URL` (default in `.env.example`), then run `pytest`. See [docs/runbook.md](docs/runbook.md#testing-full-coverage-including-db) for details.
 
-**RAG (lesson outline):** The engine includes `Retriever`, `Generator`, `LessonOutlinePipeline`, and pluggable lesson-outline prompts (`TemplatedLessonOutlineStrategy`, templates in `app/core/rag/prompts/templates/`, style ids via `get_lesson_outline_strategy` in `registry.py`). Vector search supports **metadata filters** (chapter, section, book, etc.) in Postgres. The **`POST /generate/lesson-outline` HTTP handler still returns mock JSON** until wired to the pipeline; use tests or an in-process call to exercise RAG. See [runbook — RAG pipeline](docs/runbook.md#rag-pipeline-lesson-outline).
+**RAG (lesson outline):** `POST /generate/lesson-outline` runs **`LessonOutlinePipeline`** (`app/api/generate.py` + `app/deps.py`): embed query → **pgvector** retrieval with **metadata filters** → **`Generator`** (pluggable `LessonOutlinePromptStrategy`, templates in `app/core/rag/prompts/templates/`, format rules in `prompts/rules/` by `contentType`). Responses include **`citations`** (one per retrieved chunk, same order as passages; each has a short **`snippet`**) and model text that may use **`<grounded ref="i">`** aligned with `citations[i]`. Requires `DATABASE_URL`, embedding config, indexed OER, and LLM keys as appropriate. See [runbook — RAG pipeline](docs/runbook.md#rag-pipeline-lesson-outline).
 
 **Ingest a sample chapter:** Put a PDF in `data/raw/`, then `python scripts/ingest.py run <filename>`. Use `python scripts/ingest.py list` to see files. Requires a running DB and either `VOYAGE_API_KEY` (production‑like) or the local dev embedding provider (`EMBEDDING_PROVIDER=dev`, no API key). See [local dev guide](docs/local-dev.md) and [runbook – Ingesting a sample book chapter](docs/runbook.md#ingesting-a-sample-book-chapter).
 

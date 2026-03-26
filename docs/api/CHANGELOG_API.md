@@ -10,9 +10,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-### Notes (implementation only; contract unchanged)
+(Omit until the next release.)
 
-- Citations in live RAG responses will be built from **vector chunk metadata** (`title`, `page_number`, `chapter`, `section`), not from optional `citations` in model JSON (ignored if present).
+## [0.4.0] - 2026-03-26
+
+### Added
+
+- **`Citation.snippet`:** required string, max **50** characters — short preview of the retrieved chunk text (whitespace normalized, ASCII control characters stripped). Same index `i` as `<grounded ref="i">` in `outline` / `slideOutline` and as `### Passage [i]` in the model context.
+- **Grounding contract (documentation):** responses may include `<grounded ref="N">…</grounded>` in long string fields; `N` is 0-based and aligns with `citations[N]`. For `ppt`, `slideOutline` uses the same tag format.
+
+### Changed
+
+- **`POST /generate/lesson-outline`:** HTTP handler is **wired** to the in-process RAG stack (`LessonOutlinePipeline`, `Retriever`, `Generator`). Responses are no longer fixed mock JSON; callers need a working DB, embeddings config, indexed OER chunks, and LLM credentials where applicable. Invalid LLM JSON may yield **502**.
+- **`citations` array:** one entry per **retrieved chunk**, in retrieval order (no merge/dedup by location), so client indices stay stable for grounding tags.
+
+### Migration notes
+
+- **Breaking (Dashboard/clients):** expect **live** latency and failures when DB/embeddings/LLM/indexed content are missing. Handle **502** when the model returns non-JSON or schema-invalid payloads.
+- **Citation UI:** read **`snippet`** as a short preview only; pair `<grounded ref="i">` with `citations[i]` for metadata + preview.
+
+### Notes
+
+- Optional `citations` key in raw LLM JSON remains **ignored**; the Engine always attaches citations from retrieval metadata after generation.
 
 ## [0.3.0] - 2026-03-26
 
@@ -32,7 +51,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Notes
 
-- The Engine has an in-process **RAG implementation** (`LessonOutlinePipeline`, etc.). The **HTTP** `POST /generate/lesson-outline` handler may still return **mock** data until wired to the pipeline; the `template` field is validated on the request regardless.
+- Superseded by **v0.4.0:** `POST /generate/lesson-outline` is wired to the pipeline. For current behavior see v0.4.0 and `docs/api/openapi.yaml`.
 
 ## [0.2.0] - 2026-02-25
 

@@ -1,4 +1,4 @@
-"""Default lesson-outline prompt: load template from disk, inject context via .format()."""
+"""Lesson-outline prompt strategy: load a markdown template from disk, inject request + RAG context via ``str.format()``."""
 
 from __future__ import annotations
 
@@ -8,10 +8,17 @@ from app.models.generate import LessonOutlineRequest
 
 from app.core.rag.retriever import RetrievedChunk
 
+_TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
-def _load_template() -> str:
-    path = Path(__file__).resolve().parent / "templates/default_lesson_outline.md"
-    return path.read_text(encoding="utf-8")
+
+def load_lesson_outline_template(filename: str) -> str:
+    """Load a ``.format()``-compatible markdown template from ``templates/``."""
+    return (_TEMPLATES_DIR / filename).read_text(encoding="utf-8")
+
+
+def _load_default_template() -> str:
+    """Template used when ``TemplatedLessonOutlineStrategy()`` is called with no ``template`` argument."""
+    return load_lesson_outline_template("default_lesson_outline.md")
 
 
 def _format_retrieved_context(chunks: list[RetrievedChunk]) -> str:
@@ -41,11 +48,11 @@ def _format_retrieved_context(chunks: list[RetrievedChunk]) -> str:
     return "\n\n".join(parts)
 
 
-class DefaultLessonOutlineStrategy:
-    """Single system message: instructions + formatted request + retrieved context."""
+class TemplatedLessonOutlineStrategy:
+    """Build one system turn from a format-string template plus retrieved passages."""
 
     def __init__(self, template: str | None = None) -> None:
-        self._template = template if template is not None else _load_template()
+        self._template = template if template is not None else _load_default_template()
 
     def build_messages(
         self,

@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 import asyncpg
 import pytest
 
+from app.db.vector.filters import VectorMetadataFilter
 from app.db.vector.pgvector import PgvectorStore
 
 # Skip entire module if DATABASE_URL not set (e.g. CI without Docker)
@@ -76,6 +77,68 @@ async def test_add_documents_and_query(
     assert len(results) == 2
     assert results[0]["content"] == "First chunk"
     assert results[0]["metadata"]["chunk_id"] == 0
+
+
+@pytest.mark.asyncio
+async def test_query_with_metadata_filter_chapter(
+    pgvector_store: PgvectorStore,
+) -> None:
+    """SQL WHERE metadata filters restrict rows before ORDER BY distance."""
+    await pgvector_store.ensure_collection()
+    docs = ["Ch1 chunk", "Ch2 chunk", "Ch1 other"]
+    embeddings = [[1.0] * 8, [0.99] * 8, [0.5] * 8]
+    metadatas = [
+        {
+            "source_key": "t.pdf",
+            "chunk_id": 0,
+            "chapter": "1",
+            "section": "1.1",
+            "title": "Algebra",
+        },
+        {
+            "source_key": "t.pdf",
+            "chunk_id": 1,
+            "chapter": "2",
+            "section": "2.1",
+            "title": "Algebra",
+        },
+        {
+            "source_key": "t.pdf",
+            "chunk_id": 2,
+            "chapter": "1",
+            "section": "1.2",
+            "title": "Geometry",
+        },
+    ]
+    await pgvector_store.add_documents(docs, embeddings, metadatas)
+    flt = VectorMetadataFilter(chapter="1")
+    results = await pgvector_store.query(
+        [1.0] * 8, n_results=10, metadata_filter=flt
+    )
+    assert len(results) == 2
+    assert {r["metadata"]["section"] for r in results} == {"1.1", "1.2"}
+    assert results[0]["content"] == "Ch1 chunk"
+
+
+@pytest.mark.asyncio
+async def test_query_metadata_filter_book_substring_in_title(
+    pgvector_store: PgvectorStore,
+) -> None:
+    await pgvector_store.ensure_collection()
+    docs = ["A", "B"]
+    embeddings = [[1.0] * 8, [1.0] * 8]
+    metadatas = [
+        {"source_key": "a", "chunk_id": 0, "chapter": "1", "title": "Intro Physics"},
+        {"source_key": "a", "chunk_id": 1, "chapter": "1", "title": "Chemistry Basics"},
+    ]
+    await pgvector_store.add_documents(docs, embeddings, metadatas)
+    results = await pgvector_store.query(
+        [1.0] * 8,
+        n_results=10,
+        metadata_filter=VectorMetadataFilter(chapter="1", book="physics"),
+    )
+    assert len(results) == 1
+    assert results[0]["content"] == "A"
 
 
 @pytest.mark.asyncio

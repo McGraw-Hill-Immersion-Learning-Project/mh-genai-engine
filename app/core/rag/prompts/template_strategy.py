@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -11,6 +12,29 @@ if TYPE_CHECKING:
     from app.models.generate import LessonOutlineRequest
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
+_RULES_DIR = Path(__file__).resolve().parent / "rules"
+_FORMAT_LECTURE_NOTES_PATH = _RULES_DIR / "format_lecture_notes.md"
+_FORMAT_PPT_PATH = _RULES_DIR / "format_ppt.md"
+
+
+@lru_cache(maxsize=1)
+def _load_format_rules_lecture_notes() -> str:
+    return _FORMAT_LECTURE_NOTES_PATH.read_text(encoding="utf-8").strip()
+
+
+@lru_cache(maxsize=1)
+def _load_format_rules_ppt() -> str:
+    return _FORMAT_PPT_PATH.read_text(encoding="utf-8").strip()
+
+
+def load_format_rules_for_content_type(content_type: str) -> str:
+    """Format rules for the active output mode only (smaller prompt than both at once).
+
+    *content_type* is the request enum value: ``lecture_notes`` or ``ppt``.
+    """
+    if content_type == "ppt":
+        return _load_format_rules_ppt()
+    return _load_format_rules_lecture_notes()
 
 
 def load_lesson_outline_template(filename: str) -> str:
@@ -62,16 +86,22 @@ class TemplatedLessonOutlineStrategy:
         chunks: list[RetrievedChunk],
     ) -> list[dict[str, str]]:
         retrieved_context = _format_retrieved_context(chunks)
-        system_content = self._template.format(
+        task_body = self._template.format(
             learning_objective=request.learning_objective,
             audience_level=request.audience_level.value,
             content_type=request.content_type.value,
-            chapter=request.chapter,
+            chapter=request.chapter or "",
             section=request.section or "",
             sub_section=request.sub_section or "",
             book=request.book or "",
             count=str(request.count),
             retrieved_context=retrieved_context,
+        )
+        system_content = "\n\n---\n\n".join(
+            (
+                load_format_rules_for_content_type(request.content_type.value),
+                task_body,
+            )
         )
         return [
             {"role": "system", "content": system_content},

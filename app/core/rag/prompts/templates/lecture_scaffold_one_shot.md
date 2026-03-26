@@ -24,7 +24,7 @@ The scaffold should cover, in order of importance:
 - Section: {section}
 - Sub-section: {sub_section}
 - Book (if any): {book}
-- Session length (minutes): {count}
+- Numeric target: {count} (meaning per **Format** block above — minutes vs slides)
 
 ## Audience calibration (tone and depth)
 Apply consistently to outline density, checks, and activities:
@@ -45,7 +45,8 @@ When a sentence or phrase is **directly supported** by a specific passage above,
 - Format: ``<grounded ref="INDEX">…verbatim text from that passage…</grounded>``
 - ``INDEX`` is the 0-based passage number shown in the heading (e.g. ``### Passage [0]`` → ``ref="0"``).
 - Copy the inner text **verbatim** from that passage (no paraphrase inside the tag).
-- Use tags in string fields where it helps (e.g. ``outline``, or individual ``keyConcepts`` strings); do not break JSON structure.
+- Use this **same** tag format in ``outline``, ``slideOutline`` (slide-by-slide text for ``ppt``), and optionally per-item strings in ``keyConcepts`` / other arrays. **Do not** use ``[Ref N]`` or similar—the client only recognizes ``<grounded>`` tags.
+- Do not break JSON structure.
 
 If no passages were retrieved, say so briefly in the outline and keep claims generic.
 
@@ -53,9 +54,9 @@ If no passages were retrieved, say so briefly in the outline and keep claims gen
 - **outline** — Chapter-level scaffold: numbered or titled sections and subsections. Use **copy-paste friendly** formatting inside the string: markdown headings (``##``), ``---`` between major blocks if useful, and bullets. Mirror subsection structure from the passages when they support it.
 - **keyConcepts** — **Per-subsection awareness:** use one string per concept or one string per subsection with embedded bullets, e.g. ``"1.1 Title — concept A; concept B"`` or ``"[1.1] …"`` so concepts are not a flat, unscoped list when the chapter has clear subsections.
 - **misconceptions** — Whole-chapter misconceptions; phrase each as a clear false belief or common confusion (and optionally why it is wrong in the same string, briefly).
-- **checksForUnderstanding** — Questions or prompts scaled to **{audience_level}** and roughly to **{count}** minutes (more time → slightly richer prompts, not necessarily more items).
+- **checksForUnderstanding** — Questions or prompts scaled to **{audience_level}** and to the session scope implied by **{count}** (interpret **{count}** per the **Format** block above).
 - **activityIdeas** — Concrete, class-ready activities; vary format (debate, case, simulation, pair-share, etc.) as fits the content.
-- **slideOutline** — If content type is **ppt**, a slide-by-slide plan (slide title + key bullets). If **lecture_notes**, use ``null``.
+- **slideOutline** — Follow the **Format** block above (null vs slide-by-slide string).
 
 **Scope discipline:** Deliver the scaffold fields above—avoid extra preamble, meta-commentary, or sections outside the JSON.
 
@@ -66,7 +67,7 @@ Return a **single JSON object** with exactly these keys (use exactly these names
 - ``misconceptions`` (array of strings)
 - ``checksForUnderstanding`` (array of strings)
 - ``activityIdeas`` (array of strings)
-- ``slideOutline`` (string or null): use a non-empty string only when content type is ``ppt``; otherwise ``null``.
+- ``slideOutline`` (string or null): per the **Format** block above for this request.
 
 Do not include a ``citations`` key; citations are added by the system.
 

@@ -146,7 +146,12 @@ components:
           description: Book identifier (pre-selected for POC; only one book available)
         chapter:
           type: string
-          description: Chapter identifier (from content catalog / ingestion pipeline)
+          nullable: true
+          description: |
+            Chapter identifier from the content catalog when chunks have TOC-backed
+            metadata. Omit or set null when scoping by chapter does not apply (e.g. PDFs
+            with no table of contents). Empty string is also accepted and behaves like
+            no chapter filter at retrieval time.
         section:
           type: string
           description: Section identifier within the chapter (optional content scoping)
@@ -186,7 +191,6 @@ components:
             ``GET /templates/lesson-outline``. The Engine maps this to the system prompt;
             clients do not send prompt text.
       required:
-        - chapter
         - learningObjective
         - contentType
         - count
@@ -221,7 +225,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Citation"
-          description: OER sources used to ground the outline
+          description: |
+            One entry per retrieved chunk, same order as passages in the model context.
+            Index ``i`` matches ``<grounded ref="i">``. ``snippet`` is a short preview (50 chars max).
 
     AssessmentTransformRequest:
       type: object
@@ -276,6 +282,16 @@ components:
         section:
           type: string
           description: Section within the chapter (if available)
+        snippet:
+          type: string
+          maxLength: 50
+          description: |
+            Preview of the retrieved passage (capped at 50). Whitespace is collapsed and ASCII control
+            characters removed to reduce PDF-extract noise. Same index as ``<grounded ref="i">``.
+      required:
+        - title
+        - chapter
+        - snippet
 
     Template:
       type: object

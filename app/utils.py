@@ -1,4 +1,6 @@
-"""Shared utilities for the repo (importable from anywhere).
+"""Shared utilities for the repo.
+
+Import as ``from app.utils import ...`` (package root must be on ``sys.path``).
 
 Keep this module lightweight and dependency-free so it is safe to import from
 core application code, scripts, and tests.
@@ -9,6 +11,29 @@ from __future__ import annotations
 import logging
 import re
 import hashlib
+
+
+def normalize_citation_snippet_text(text: str) -> str:
+    """Make vector/PDF chunk text readable in short citation previews.
+
+    Collapses Unicode whitespace to a single ASCII space and drops ASCII control
+    characters (except those already treated as whitespace), which often appear
+    in extracted PDFs. Fixing broken words / layout is left to ingestion
+    (e.g. Docling); this stays intentionally light.
+    """
+
+    if not text:
+        return ""
+    parts: list[str] = []
+    for ch in text:
+        if ch.isspace():
+            parts.append(" ")
+        elif ord(ch) < 32:
+            continue
+        else:
+            parts.append(ch)
+    s = "".join(parts)
+    return re.sub(r" +", " ", s).strip()
 
 
 def get_logger(name: str) -> logging.Logger:

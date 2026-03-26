@@ -31,15 +31,22 @@ def test_extracts_title(sample_pdf_bytes):
 
 
 def test_toc_entries_are_typed(sample_pdf_bytes):
-    # Docling infers TOC from visual section headers (font size, style).
-    # Synthetic test PDFs have no visual hierarchy, so toc may be empty.
-    # On real OER PDFs Docling detects proper chapter/section levels.
     doc = DocumentParser().parse("test.pdf", sample_pdf_bytes)
     assert isinstance(doc.toc, list)
     assert all(isinstance(e, TocEntry) for e in doc.toc)
 
 
+def test_toc_uses_embedded_bookmarks_when_present(sample_pdf_bytes):
+    # sample_pdf_bytes has embedded bookmarks: 1 chapter (level 1) + 2 sections (level 2)
+    doc = DocumentParser().parse("test.pdf", sample_pdf_bytes)
+    assert len(doc.toc) == 3
+    assert doc.toc[0] == TocEntry(level=1, title="Chapter 1: Supply and Demand", page=1)
+    assert doc.toc[1] == TocEntry(level=2, title="1.1 What is Economics?", page=2)
+    assert doc.toc[2] == TocEntry(level=2, title="1.2 Microeconomics and Macroeconomics", page=3)
+
+
 def test_no_toc_returns_empty_list(sample_pdf_no_toc_bytes):
+    # no bookmarks + no Docling-detectable visual headings → empty TOC
     doc = DocumentParser().parse("no_toc.pdf", sample_pdf_no_toc_bytes)
     assert doc.toc == []
     assert len(doc.pages) == 2

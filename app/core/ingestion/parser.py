@@ -56,8 +56,9 @@ class DocumentParser:
         (headings, tables, lists) rather than raw flat text. Page provenance
         is preserved via each item's prov[0].page_no field.
 
-        TOC is inferred from section headings (levels 1–2) found in the
-        document — no reliance on embedded PDF bookmarks.
+        TOC strategy: use embedded PDF bookmarks when present (more accurate,
+        author-intended structure), otherwise fall back to Docling's visual
+        SECTION_HEADER detection (handles OER PDFs that lack bookmarks).
         """
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
             tmp.write(data)
@@ -68,15 +69,17 @@ class DocumentParser:
         finally:
             os.unlink(tmp_path)
 
-        # Read title from PDF metadata — Docling does not surface embedded metadata.
+        # Read title and embedded bookmarks via pypdfium2 — Docling does not surface these.
         pdf_doc = pdfium.PdfDocument(data)
         title = pdf_doc.get_metadata_dict().get("Title", "")
+        bookmark_toc = self._extract_bookmark_toc(pdf_doc)
         pdf_doc.close()
 
         doc = result.document
 
         pages_content: dict[int, list[str]] = defaultdict(list)
-        toc: list[TocEntry] = []
+        # use Docling heading inference only when the PDF has no embedded bookmarks
+        docling_toc: list[TocEntry] = []
 
         for item, _ in doc.iterate_items():
             # skip items with no page provenance (e.g. document-level metadata)
@@ -89,11 +92,11 @@ class DocumentParser:
                 pages_content[page_no].append(f"# {item.text}")
 
             elif item.label == DocItemLabel.SECTION_HEADER and isinstance(item, SectionHeaderItem):
-                # section heading — render with correct Markdown depth and record in TOC
+                # section heading — render with correct Markdown depth
                 heading_prefix = "#" * item.level
                 pages_content[page_no].append(f"{heading_prefix} {item.text}")
                 if item.level <= 2:  # only chapter (1) and section (2) headings go in the TOC
-                    toc.append(TocEntry(level=item.level, title=item.text, page=page_no))
+                    docling_toc.append(TocEntry(level=item.level, title=item.text, page=page_no))
 
             elif item.label == DocItemLabel.TABLE and isinstance(item, TableItem):
                 # export tables as Markdown so the chunker sees structured rows
@@ -103,6 +106,9 @@ class DocumentParser:
                 # plain paragraph text
                 pages_content[page_no].append(item.text)
 
+        # prefer embedded bookmarks; fall back to Docling's visual heading inference
+        toc = bookmark_toc if bookmark_toc else docling_toc
+
         # assemble per-page objects, sorted by page number, skipping blank pages
         pages = [
             PageText(page_number=pg, text="\n\n".join(parts))
@@ -111,3 +117,26 @@ class DocumentParser:
         ]
 
         return ParsedDocument(pages=pages, title=title, toc=toc)
+
+    def _extract_bookmark_toc(self, pdf_doc: pdfium.PdfDocument) -> list[TocEntry]:
+        """Extract TOC from embedded PDF bookmarks (levels 1–2 only).
+
+        Returns an empty list if the PDF has no bookmarks, which signals the
+        caller to fall back to Docling's visual heading detection.
+        """
+        toc: list[TocEntry] = []
+        for bookmark in pdf_doc.get_toc():
+            if bookmark.level > 1:  # 0-based: keep level 0 (chapter) and 1 (section)
+                continue
+            dest = bookmark.get_dest()
+            if dest is None:
+                continue
+            page_index = dest.get_index()
+            if page_index is None:
+                continue
+            toc.append(TocEntry(
+                level=bookmark.level + 1,  # convert 0-based to 1-based to match TocEntry convention
+                title=bookmark.get_title(),
+                page=page_index + 1,       # convert 0-based page index to 1-indexed page number
+            ))
+        return toc

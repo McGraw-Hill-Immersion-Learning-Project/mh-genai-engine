@@ -1,4 +1,4 @@
-**Engine template:** The runtime prompt is `lecture_scaffold_one_shot.md`. Use `get_lesson_outline_strategy("lecture_scaffold_one_shot")`. Same `.format()` placeholders and JSON contract as `default_lesson_outline.md`. The content below is **design notes and historical model outputs** for research—not the string sent to the LLM verbatim.
+**Engine template:** The runtime prompt is `app/core/rag/prompts/templates/lecture_scaffold_one_shot.md`. Use `get_lesson_outline_strategy("lecture_scaffold_one_shot")`. Same `.format()` placeholders and JSON contract as `templates/default_lesson_outline.md`. The content below is **design notes and historical model outputs** for research—not the string sent to the LLM verbatim.
 
 ---
 

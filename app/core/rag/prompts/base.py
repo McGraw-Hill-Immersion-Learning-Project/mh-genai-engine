@@ -7,7 +7,7 @@ Contract (enforced by Generator, documented here for prompt authors):
 - The model must return **strict JSON** with lesson-outline fields. Do **not** rely on
   the model for ``citations``; the Generator overwrites citations from chunk metadata.
 - Use ``{{`` and ``}}`` in template files for literal braces (e.g. JSON examples).
-- Dynamic retrieval is injected via a ``{retrieved_context}`` placeholder in the template (see default ``.md``).
+- Dynamic retrieval is injected via a ``{retrieved_context}`` placeholder in the template (see ``app/core/rag/prompts/templates/*.md``).
 - Passages are listed with 0-based indices; prompts may instruct the model to emit ``<grounded ref="N">…</grounded>`` where ``N`` matches the passage index for client-side styling / future citation links.
 """
 

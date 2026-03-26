@@ -50,7 +50,7 @@ The **engine** implements lesson-outline RAG in-process (see `app/core/rag/`):
 | `Retriever` | Embeds a semantic query string, runs pgvector similarity search with optional `VectorMetadataFilter` (chapter, section, sub-section prefix, book substring on `title`). |
 | `Generator` | Builds chat turns via a `LessonOutlinePromptStrategy`, calls `LLMProvider.complete`, parses JSON into `LessonOutlineGeneratedBody`, attaches `citations` from chunk metadata. |
 | `LessonOutlinePipeline` | `build_embedding_query()` = learning objective + audience + session length; `metadata_filter_for_request()` = structural fields from `LessonOutlineRequest`. |
-| `app/core/rag/prompts/` | Pluggable strategies + `default_lesson_outline.md` (`.format()` placeholders, `{retrieved_context}`, optional `<grounded ref="N">` for UI). |
+| `app/core/rag/prompts/` | `LessonOutlinePromptStrategy` implementations; `template_strategy.py` (`TemplatedLessonOutlineStrategy`, `load_lesson_outline_template`). Markdown templates in `prompts/templates/` (`.format()` placeholders, `{retrieved_context}`, optional `<grounded ref="N">` for UI). Registry: `get_lesson_outline_strategy("default")` → `default_lesson_outline.md`; `get_lesson_outline_strategy("lecture_scaffold_one_shot")` → `lecture_scaffold_one_shot.md`. |
 
 **HTTP vs engine:** `POST /generate/lesson-outline` in `app/api/generate.py` still returns **mock** JSON for contract smoke tests. It does **not** call the pipeline yet. To exercise RAG: run `pytest tests/core/rag/` (mocked deps) or wire the route / a script to `LessonOutlinePipeline` + `get_*` providers.
 

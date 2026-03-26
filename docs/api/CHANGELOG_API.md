@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - OpenAPI paths and JSON shapes for `POST /generate/lesson-outline` are **unchanged**. The Engine now has an in-process **RAG implementation** (`LessonOutlinePipeline`, etc.) and internal schema split (`LessonOutlineGeneratedBody` for LLM JSON vs `LessonOutlineResponse` with citations). The **HTTP route still returns mock data** until the handler is wired to the pipeline.
 - Citations in live RAG responses will be built from **vector chunk metadata** (`title`, `page_number`, `chapter`, `section`), not from optional `citations` in model JSON (ignored if present).
+- **Prompt styles (internal):** `get_lesson_outline_strategy(style_id)` selects markdown templates (`default`, `lecture_scaffold_one_shot`). No request field exposes this yet; wire `Generator` when connecting the HTTP handler.
 
 ## [0.2.0] - 2026-02-25
 

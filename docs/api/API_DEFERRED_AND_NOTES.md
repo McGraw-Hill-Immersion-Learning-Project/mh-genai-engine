@@ -62,6 +62,7 @@ This document tracks fields, endpoints, and behaviors that are **explicitly defe
 ### Lesson outline: HTTP handler vs in-process RAG engine
 
 - **Engine:** `LessonOutlinePipeline` + `Retriever` + `Generator` + pluggable prompts under `app/core/rag/` are implemented and covered by unit tests (`tests/core/rag/`). Retrieval uses pgvector with optional metadata filters aligned to `LessonOutlineRequest` (chapter, section, subSection, book). LLM output is parsed into `LessonOutlineGeneratedBody`; `citations` are always derived from retrieved chunk metadata, not from the model.
+- **Prompt styles (in-process, not yet on HTTP):** `get_lesson_outline_strategy(style_id)` selects markdown under `app/core/rag/prompts/templates/` (`default`, `lecture_scaffold_one_shot`). Wiring the public API may later expose a style or map dashboard “template” ids to these strategies.
 - **HTTP:** `POST /generate/lesson-outline` currently returns **mock** response data in `app/api/generate.py` so the OpenAPI contract can be exercised without keys or indexed content. **Wiring the route to the pipeline** is a separate integration step (deps: `DATABASE_URL`, embeddings, indexed PDFs, `ANTHROPIC_API_KEY` when using Claude).
 
 ### Templates: what they are and who provides them
@@ -79,6 +80,7 @@ This document tracks fields, endpoints, and behaviors that are **explicitly defe
 
 ## Changelog
 
+- **2026-03-26:** Documented lesson-outline prompt registry (`get_lesson_outline_strategy`, `templates/*.md`, `TemplatedLessonOutlineStrategy`).
 - **2026-03-17:** Clarified lesson-outline **mock HTTP handler** vs **implemented RAG engine** (`app/core/rag/`); citations and metadata filtering behavior documented for Team B alignment.
 - **2026-02-25:** Resolved `sections` deferred item (added `section`/`subSection` to request). Resolved `workflow` field routing decision. Deferred `POST /retrieve`, `POST /telemetry/log`, content catalog endpoint. Updated assessment deferred items to reflect Workflow 2 scope change. Added quality checklist clarification.
 - **2026-02-18:** Initial deferred list: sections, batch assessment, structured rubric; templates clarification.

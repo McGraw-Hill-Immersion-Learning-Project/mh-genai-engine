@@ -10,9 +10,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **RAG lesson-outline prompts:** `template_strategy.py` implements `TemplatedLessonOutlineStrategy` (markdown templates + `str.format()` for request fields and `{retrieved_context}`). Templates live under `app/core/rag/prompts/templates/`. `get_lesson_outline_strategy(style_id)` registry: `default` → `default_lesson_outline.md`, `lecture_scaffold_one_shot` → `lecture_scaffold_one_shot.md` (research-backed variant; see `templates/System Prompt 1.md`).
+
 ### Added
 
-- **RAG (lesson outline):** `Retriever` (embed query + vector search), `Generator` (strict JSON → `LessonOutlineGeneratedBody`, citations from chunk metadata), `LessonOutlinePipeline` (embedding query vs metadata filters). Pluggable `LessonOutlinePromptStrategy` and registry; default template `app/core/rag/prompts/default_lesson_outline.md` with `{retrieved_context}` and optional `<grounded ref="N">` guidance.
+- **RAG (lesson outline):** `Retriever` (embed query + vector search), `Generator` (strict JSON → `LessonOutlineGeneratedBody`, citations from chunk metadata), `LessonOutlinePipeline` (embedding query vs metadata filters). Pluggable `LessonOutlinePromptStrategy`, `get_lesson_outline_strategy()`, and markdown templates under `app/core/rag/prompts/templates/` with `{retrieved_context}` and optional `<grounded ref="N">` guidance.
 - **Vector metadata filters:** `VectorMetadataFilter` and `VectorStore.query(..., metadata_filter=...)` implemented for pgvector (SQL) and in-memory test store. Pipeline maps `LessonOutlineRequest` chapter/section/subSection/book into filters; semantic embed text uses learning objective + audience + session length.
 - **`LessonOutlineGeneratedBody`** Pydantic model (LLM body without citations); `LessonOutlineResponse` subclasses it and adds citations.
 - **Anthropic LLM:** `AnthropicLLMProvider` using `anthropic` Python SDK (`>= 0.80`, `AsyncAnthropic.messages.create`). Dependency added in `requirements.txt`.

@@ -1,22 +1,35 @@
-"""Tests for GET /templates and absence of removed support endpoints."""
+"""Tests for GET /templates/{workflow}."""
 
 from fastapi.testclient import TestClient
 
 
-class TestTemplatesEndpoint:
-    def test_returns_200(self, client: TestClient) -> None:
-        resp = client.get("/templates")
+class TestTemplatesByWorkflow:
+    def test_lesson_outline_returns_200(self, client: TestClient) -> None:
+        resp = client.get("/templates/lesson-outline")
         assert resp.status_code == 200
 
-    def test_response_shape_matches_template_list(self, client: TestClient) -> None:
-        resp = client.get("/templates")
-        data = resp.json()
-
+    def test_lesson_outline_lists_kebab_case_ids(self, client: TestClient) -> None:
+        data = client.get("/templates/lesson-outline").json()
         assert "templates" in data
-        assert isinstance(data["templates"], list)
-        assert len(data["templates"]) > 0
+        ids = {t["id"] for t in data["templates"]}
+        assert ids == {"default", "lecture-scaffold-one-shot"}
 
-        first = data["templates"][0]
-        for field in ("id", "name", "description"):
-            assert field in first
-            assert isinstance(first[field], str)
+    def test_assessment_transform_returns_200(self, client: TestClient) -> None:
+        resp = client.get("/templates/assessment-transform")
+        assert resp.status_code == 200
+
+    def test_assessment_transform_includes_default_template(self, client: TestClient) -> None:
+        data = client.get("/templates/assessment-transform").json()
+        assert len(data["templates"]) == 1
+        assert data["templates"][0]["id"] == "default"
+
+    def test_response_shape(self, client: TestClient) -> None:
+        data = client.get("/templates/lesson-outline").json()
+        for t in data["templates"]:
+            for field in ("id", "name", "description"):
+                assert field in t
+                assert isinstance(t[field], str)
+
+    def test_unknown_workflow_returns_422(self, client: TestClient) -> None:
+        resp = client.get("/templates/unknown-workflow")
+        assert resp.status_code == 422

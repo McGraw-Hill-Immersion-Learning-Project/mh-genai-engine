@@ -7,7 +7,9 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.core.rag.prompts.registry import lesson_outline_template_api_ids
 
 
 class ContentType(str, Enum):
@@ -38,8 +40,20 @@ class LessonOutlineRequest(BaseModel):
     count: int
     audience_level: Annotated[AudienceLevel, Field(alias="audienceLevel")]
     regenerated_response: Annotated[bool, Field(alias="regeneratedResponse")] = False
+    template: str = "default"
 
     model_config = {"populate_by_name": True}
+
+    @field_validator("template")
+    @classmethod
+    def template_must_be_listed(cls, v: str) -> str:
+        allowed = lesson_outline_template_api_ids()
+        if v not in allowed:
+            raise ValueError(
+                f"Unknown template {v!r}; must match an id from GET /templates/lesson-outline "
+                f"(allowed: {sorted(allowed)})"
+            )
+        return v
 
 
 class LessonOutlineGeneratedBody(BaseModel):

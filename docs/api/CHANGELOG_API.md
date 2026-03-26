@@ -12,8 +12,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Notes (implementation only; contract unchanged)
 
-- OpenAPI paths and JSON shapes for `POST /generate/lesson-outline` are **unchanged**. The Engine now has an in-process **RAG implementation** (`LessonOutlinePipeline`, etc.) and internal schema split (`LessonOutlineGeneratedBody` for LLM JSON vs `LessonOutlineResponse` with citations). The **HTTP route still returns mock data** until the handler is wired to the pipeline.
 - Citations in live RAG responses will be built from **vector chunk metadata** (`title`, `page_number`, `chapter`, `section`), not from optional `citations` in model JSON (ignored if present).
+
+## [0.3.0] - 2026-03-26
+
+### Added
+
+- `LessonOutlineRequest`: optional `template` field (string, default `default`). Values are **kebab-case** ids returned by `GET /templates/lesson-outline`. The Engine maps `template` to the corresponding lesson-outline system prompt (`get_lesson_outline_strategy_by_template_id` in-process).
+- `GET /templates/{workflow}` with `workflow` enum `lesson-outline` | `assessment-transform`. Returns `{ "templates": [ { "id", "name", "description" } ] }` for that workflow only.
+
+### Changed (breaking)
+
+- **Removed** `GET /templates`. Callers must use `GET /templates/lesson-outline` and/or `GET /templates/assessment-transform`.
+
+### Migration notes
+
+- Replace `GET /templates` with the appropriate `GET /templates/{workflow}` path. Lesson-outline prompt ids are now **kebab-case** (`default`, `lecture-scaffold-one-shot`), not legacy workflow slugs like `lesson-outline`.
+- When calling `POST /generate/lesson-outline`, omit `template` to keep the default prompt, or set `template` to an id from `GET /templates/lesson-outline`.
+
+### Notes
+
+- The Engine has an in-process **RAG implementation** (`LessonOutlinePipeline`, etc.). The **HTTP** `POST /generate/lesson-outline` handler may still return **mock** data until wired to the pipeline; the `template` field is validated on the request regardless.
 
 ## [0.2.0] - 2026-02-25
 

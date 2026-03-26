@@ -62,13 +62,14 @@ This document tracks fields, endpoints, and behaviors that are **explicitly defe
 ### Lesson outline: HTTP handler vs in-process RAG engine
 
 - **Engine:** `LessonOutlinePipeline` + `Retriever` + `Generator` + pluggable prompts under `app/core/rag/` are implemented and covered by unit tests (`tests/core/rag/`). Retrieval uses pgvector with optional metadata filters aligned to `LessonOutlineRequest` (chapter, section, subSection, book). LLM output is parsed into `LessonOutlineGeneratedBody`; `citations` are always derived from retrieved chunk metadata, not from the model.
+- **Prompt templates:** `LessonOutlineRequest.template` (kebab-case) selects the lesson-outline system prompt; values match ``GET /templates/lesson-outline``. Internally, `get_lesson_outline_strategy_by_template_id` maps to markdown under `app/core/rag/prompts/templates/` (internal keys `default`, `lecture_scaffold_one_shot`). The HTTP generate handler may still return mock data until wired to the pipeline.
 - **HTTP:** `POST /generate/lesson-outline` currently returns **mock** response data in `app/api/generate.py` so the OpenAPI contract can be exercised without keys or indexed content. **Wiring the route to the pipeline** is a separate integration step (deps: `DATABASE_URL`, embeddings, indexed PDFs, `ANTHROPIC_API_KEY` when using Claude).
 
 ### Templates: what they are and who provides them
 
 - **What:** "Templates" are the Engine's 2-3 approved, guardrailed recipe types (per Project A SOW), e.g. "Title/Chapter Q&A", "Role/Scenario Coach", "Instructor task assistant" (lesson outline, assessment transform, etc.).
-- **Who provides:** The **Engine (Project A)** defines and serves the list. The Dashboard (Project B) calls `GET /templates` to list available templates and then sends the chosen template id (or equivalent) when calling generate endpoints.
-- **Decision (v0.2.0):** Endpoint-path-based routing. No `templateId` or `workflow` field in request bodies. Each workflow has its own endpoint.
+- **Who provides:** The **Engine (Project A)** defines and serves the list. The Dashboard (Project B) calls `GET /templates/{workflow}` (e.g. `lesson-outline`, `assessment-transform`) and sends the chosen template ``id`` on `POST /generate/lesson-outline` as `template` (Workflow 2 may add an equivalent field later).
+- **Routing:** Each workflow keeps its own generate endpoint; template variant is selected by the `template` field on lesson-outline requests (v0.3.0).
 
 ### Quality checklists (Workflow 1 and Workflow 2)
 
@@ -79,6 +80,7 @@ This document tracks fields, endpoints, and behaviors that are **explicitly defe
 
 ## Changelog
 
+- **2026-03-26:** Documented lesson-outline prompt registry (`get_lesson_outline_strategy`, `templates/*.md`, `TemplatedLessonOutlineStrategy`).
 - **2026-03-17:** Clarified lesson-outline **mock HTTP handler** vs **implemented RAG engine** (`app/core/rag/`); citations and metadata filtering behavior documented for Team B alignment.
 - **2026-02-25:** Resolved `sections` deferred item (added `section`/`subSection` to request). Resolved `workflow` field routing decision. Deferred `POST /retrieve`, `POST /telemetry/log`, content catalog endpoint. Updated assessment deferred items to reflect Workflow 2 scope change. Added quality checklist clarification.
 - **2026-02-18:** Initial deferred list: sections, batch assessment, structured rubric; templates clarification.

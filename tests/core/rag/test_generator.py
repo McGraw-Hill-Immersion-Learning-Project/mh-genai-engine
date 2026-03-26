@@ -10,8 +10,11 @@ from app.models.generate import (
     LessonOutlineRequest,
 )
 from app.core.rag.generator import Generator, citations_from_chunks
-from app.core.rag.prompts.default_strategy import DefaultLessonOutlineStrategy
-from app.core.rag.prompts.registry import get_lesson_outline_strategy
+from app.core.rag.prompts.template_strategy import TemplatedLessonOutlineStrategy
+from app.core.rag.prompts.registry import (
+    get_lesson_outline_strategy,
+    get_lesson_outline_strategy_by_template_id,
+)
 from app.core.rag.retriever import RetrievedChunk
 
 from tests.mocks import FakeLLMProvider
@@ -33,7 +36,7 @@ def _outline_request(
 @pytest.mark.asyncio
 async def test_generator_calls_llm_and_merges_citations_from_chunks() -> None:
     llm = FakeLLMProvider()
-    gen = Generator(llm, DefaultLessonOutlineStrategy())
+    gen = Generator(llm, TemplatedLessonOutlineStrategy())
     chunks = [
         RetrievedChunk(
             content="Osteons form compact bone.",
@@ -74,7 +77,7 @@ async def test_generator_forces_slide_outline_none_for_lecture_notes() -> None:
         "slideOutline": "Should not appear",
     }
     llm = FakeLLMProvider(json.dumps(payload))
-    gen = Generator(llm, DefaultLessonOutlineStrategy())
+    gen = Generator(llm, TemplatedLessonOutlineStrategy())
     resp = await gen.generate([], _outline_request(content_type=ContentType.LECTURE_NOTES))
     assert resp.slide_outline is None
 
@@ -90,7 +93,7 @@ async def test_generator_keeps_slide_outline_for_ppt() -> None:
         "slideOutline": "Slide 1: Title",
     }
     llm = FakeLLMProvider(json.dumps(payload))
-    gen = Generator(llm, DefaultLessonOutlineStrategy())
+    gen = Generator(llm, TemplatedLessonOutlineStrategy())
     resp = await gen.generate([], _outline_request(content_type=ContentType.PPT))
     assert resp.slide_outline == "Slide 1: Title"
 
@@ -113,6 +116,46 @@ def test_get_lesson_outline_strategy_default() -> None:
     assert s.build_messages is not None
 
 
+def test_get_lesson_outline_strategy_lecture_scaffold_one_shot() -> None:
+    s = get_lesson_outline_strategy("lecture_scaffold_one_shot")
+    assert s.build_messages is not None
+
+
+def test_lecture_scaffold_one_shot_injects_request_and_context() -> None:
+    req = _outline_request()
+    chunks = [
+        RetrievedChunk(
+            content="Sample passage for grounding.",
+            metadata={"title": "Book A", "chapter": "6"},
+        )
+    ]
+    messages = get_lesson_outline_strategy("lecture_scaffold_one_shot").build_messages(
+        req, chunks
+    )
+    system = messages[0]["content"]
+    assert req.learning_objective in system
+    assert req.audience_level.value in system
+    assert req.content_type.value in system
+    assert "Sample passage for grounding." in system
+    assert "### Passage [0]" in system
+    assert "{learning_objective}" not in system
+
+
 def test_get_lesson_outline_strategy_unknown_raises() -> None:
     with pytest.raises(ValueError, match="Unknown lesson outline style"):
         get_lesson_outline_strategy("nope")
+
+
+def test_get_lesson_outline_strategy_by_template_id_default() -> None:
+    s = get_lesson_outline_strategy_by_template_id("default")
+    assert s.build_messages is not None
+
+
+def test_get_lesson_outline_strategy_by_template_id_lecture_scaffold() -> None:
+    s = get_lesson_outline_strategy_by_template_id("lecture-scaffold-one-shot")
+    assert s.build_messages is not None
+
+
+def test_get_lesson_outline_strategy_by_template_id_unknown_raises() -> None:
+    with pytest.raises(ValueError, match="Unknown lesson outline template"):
+        get_lesson_outline_strategy_by_template_id("lecture_scaffold_one_shot")

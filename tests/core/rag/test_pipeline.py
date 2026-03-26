@@ -72,6 +72,18 @@ def test_build_embedding_query_uses_objective_audience_and_duration() -> None:
     assert "My Book" not in q
 
 
+def test_metadata_filter_for_request_omits_chapter_when_not_set() -> None:
+    req = LessonOutlineRequest(
+        learningObjective="X",
+        contentType=ContentType.LECTURE_NOTES,
+        count=5,
+        audienceLevel=AudienceLevel.BEGINNER,
+    )
+    f = LessonOutlinePipeline.metadata_filter_for_request(req)
+    assert f.chapter is None
+    assert not f.has_any()
+
+
 def test_metadata_filter_for_request_maps_structural_fields() -> None:
     req = LessonOutlineRequest(
         chapter="2",

@@ -9,6 +9,8 @@ from app.models.generate import (
     ContentType,
     LessonOutlineRequest,
 )
+from app.models.generate import CITATION_SNIPPET_MAX_LEN, Citation
+
 from app.core.rag.generator import Generator, citations_from_chunks
 from app.core.rag.prompts.template_strategy import TemplatedLessonOutlineStrategy
 from app.core.rag.prompts.registry import (
@@ -34,7 +36,7 @@ def _outline_request(
 
 
 @pytest.mark.asyncio
-async def test_generator_calls_llm_and_merges_citations_from_chunks() -> None:
+async def test_generator_calls_llm_and_builds_citations_from_chunks() -> None:
     llm = FakeLLMProvider()
     gen = Generator(llm, TemplatedLessonOutlineStrategy())
     chunks = [
@@ -58,6 +60,8 @@ async def test_generator_calls_llm_and_merges_citations_from_chunks() -> None:
     assert resp.citations[0].page == "142"
     assert resp.citations[0].chapter == "6"
     assert resp.citations[0].section == "6.3"
+    assert resp.citations[0].snippet == "Osteons form compact bone."
+    assert len(resp.citations[0].snippet) <= CITATION_SNIPPET_MAX_LEN
 
     assert len(llm.calls) == 1
     messages = llm.calls[0]
@@ -98,17 +102,37 @@ async def test_generator_keeps_slide_outline_for_ppt() -> None:
     assert resp.slide_outline == "Slide 1: Title"
 
 
-def test_citations_from_chunks_dedupes_and_handles_sparse_metadata() -> None:
+def test_citations_from_chunks_one_per_chunk_preserves_order_and_snippets() -> None:
     chunks = [
-        RetrievedChunk("a", {"title": "T", "page_number": 1, "chapter": "1"}),
-        RetrievedChunk("b", {"title": "T", "page_number": 1, "chapter": "1"}),
-        RetrievedChunk("c", {"source_key": "only.pdf", "chapter": ""}),
+        RetrievedChunk("a", {"title": "T", "page_number": 1, "chapter": "1", "chunk_id": 0}),
+        RetrievedChunk("b", {"title": "T", "page_number": 1, "chapter": "1", "chunk_id": 1}),
+        RetrievedChunk("c", {"source_key": "only.pdf", "chapter": "", "chunk_id": 2}),
     ]
     cites = citations_from_chunks(chunks)
-    assert len(cites) == 2
-    assert cites[1].title == "only.pdf"
-    assert cites[1].page is None
-    assert cites[1].chapter == ""
+    assert len(cites) == 3
+    assert cites[0].snippet == "a" and cites[1].snippet == "b"
+    assert cites[1].title == "T" and cites[1].page == "1"
+    assert cites[2].title == "only.pdf"
+    assert cites[2].page is None
+    assert cites[2].chapter == ""
+    assert cites[2].snippet == "c"
+
+
+def test_citation_snippet_normalizes_pdf_noise_then_caps() -> None:
+    raw = "PREDICTIONS\nOF\nSUPPL\x02\x03Y\nAND\nDEMAND\n" + "x" * 80
+    c = Citation(title="t", chapter="1", snippet=raw)
+    assert len(c.snippet) == CITATION_SNIPPET_MAX_LEN
+    assert c.snippet.startswith("PREDICTIONS OF SUPPLY")
+
+
+def test_citations_from_chunks_truncates_long_snippet() -> None:
+    long = "x" * 200
+    cites = citations_from_chunks(
+        [RetrievedChunk(long, {"title": "T", "chapter": "1"})]
+    )
+    assert len(cites) == 1
+    assert len(cites[0].snippet) == CITATION_SNIPPET_MAX_LEN
+    assert cites[0].snippet == "x" * CITATION_SNIPPET_MAX_LEN
 
 
 def test_get_lesson_outline_strategy_default() -> None:
@@ -139,6 +163,26 @@ def test_lecture_scaffold_one_shot_injects_request_and_context() -> None:
     assert "Sample passage for grounding." in system
     assert "### Passage [0]" in system
     assert "{learning_objective}" not in system
+
+
+def test_lecture_notes_prompt_includes_only_lecture_format_block() -> None:
+    messages = TemplatedLessonOutlineStrategy().build_messages(_outline_request(), [])
+    system = messages[0]["content"]
+    assert "## Shared constraints" in system
+    assert "## Format: `lecture_notes`" in system
+    assert "## Format: `ppt`" not in system
+    assert system.count("\n---\n") >= 1
+    assert "instructional designer" in system.lower()
+
+
+def test_ppt_prompt_includes_only_ppt_format_block() -> None:
+    messages = TemplatedLessonOutlineStrategy().build_messages(
+        _outline_request(content_type=ContentType.PPT), []
+    )
+    system = messages[0]["content"]
+    assert "## Shared constraints" in system
+    assert "## Format: `ppt`" in system
+    assert "## Format: `lecture_notes`" not in system
 
 
 def test_get_lesson_outline_strategy_unknown_raises() -> None:

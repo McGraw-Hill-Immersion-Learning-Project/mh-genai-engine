@@ -1,5 +1,6 @@
 """Shared test fakes for ingestion and RAG tests."""
 
+import asyncio
 import json
 
 from app.db.vector.filters import VectorMetadataFilter
@@ -27,6 +28,27 @@ class FakeLLMProvider:
     async def complete(self, messages: list[dict[str, str]]) -> str:
         self.calls.append(messages)
         return self.response_text
+
+
+class AdaptiveLessonOutlineFakeLLM:
+    """Fake LLM: adds a non-empty slideOutline when the system prompt is for PPT."""
+
+    def __init__(self) -> None:
+        self.calls: list[list[dict[str, str]]] = []
+
+    async def complete(self, messages: list[dict[str, str]]) -> str:
+        self.calls.append(messages)
+        system = messages[0]["content"] if messages else ""
+        data = json.loads(_FAKE_LESSON_OUTLINE_JSON)
+        if "- Content type: ppt" in system:
+            data["slideOutline"] = (
+                "Slide 1: Title — Bone structure\n"
+                "Slide 2: Learning objectives\n"
+                "Slide 3: Discussion"
+            )
+        else:
+            data["slideOutline"] = None
+        return json.dumps(data)
 
 
 class FakeEmbeddingProvider:
@@ -130,6 +152,32 @@ class InMemoryVectorStore:
 
     async def ensure_index(self) -> None:
         pass
+
+
+def seed_default_lesson_outline_store() -> InMemoryVectorStore:
+    """In-memory chunks aligned with default API tests (chapter 6, anatomy title)."""
+    store = InMemoryVectorStore()
+    meta = {
+        "title": "Anatomy & Physiology",
+        "page_number": 142,
+        "chapter": "6",
+        "section": "6.3",
+        "source_key": "ap.pdf",
+        "chunk_id": "0",
+    }
+
+    async def _seed() -> None:
+        await store.add_documents(
+            [
+                "Compact bone is organized into osteons (Haversian systems). "
+                "Spongy bone forms trabeculae; osteoblasts deposit matrix."
+            ],
+            [[0.0] * 8],
+            [meta],
+        )
+
+    asyncio.run(_seed())
+    return store
 
 
 def _in_memory_metadata_matches(meta: dict, f: VectorMetadataFilter) -> bool:

@@ -1,11 +1,15 @@
-"""Generate endpoints - mock handlers returning hardcoded JSON.
+"""Generate endpoints: lesson outline via RAG; assessment transform still mock."""
 
-Responses match the schemas defined in docs/api/openapi.yaml (v0.2.0).
-Replace mock data with real RAG pipeline calls when providers are built.
-"""
+from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
+from typing import Annotated
 
+from app.core.rag.generator import Generator
+from app.core.rag.pipeline import LessonOutlinePipeline
+from app.core.rag.prompts.registry import get_lesson_outline_strategy_by_template_id
+from app.core.rag.retriever import Retriever
+from app.deps import get_llm, get_retriever
 from app.models.generate import (
     AssessmentTransformRequest,
     AssessmentTransformResponse,
@@ -13,75 +17,43 @@ from app.models.generate import (
     LessonOutlineRequest,
     LessonOutlineResponse,
 )
+from app.providers.llm.base import LLMProvider
 
 router = APIRouter(tags=["generate"])
 
-_MOCK_CITATIONS = [
+_ASSESSMENT_MOCK_CITATIONS = [
     Citation(
         title="Anatomy & Physiology",
         page="142",
         chapter="6",
         section="6.3 Bone Structure",
+        snippet="Mock assessment citation (not from retrieval).",
     ),
     Citation(
         title="Anatomy & Physiology",
         chapter="6",
         section="6.4 Bone Formation and Development",
+        snippet="Mock assessment citation (not from retrieval).",
     ),
 ]
 
 
 @router.post("/generate/lesson-outline")
-def generate_lesson_outline(
+async def generate_lesson_outline(
     body: LessonOutlineRequest,
+    retriever: Annotated[Retriever, Depends(get_retriever)],
+    llm: Annotated[LLMProvider, Depends(get_llm)],
 ) -> LessonOutlineResponse:
-    """Return a mock lesson outline. Swap for real generation later."""
-    return LessonOutlineResponse(
-        outline=(
-            "I. Introduction to Bone Structure (5 min)\n"
-            "   - Overview of skeletal system functions\n"
-            "   - Types of bone tissue\n"
-            "II. Compact vs. Spongy Bone (15 min)\n"
-            "   - Osteon structure and haversian systems\n"
-            "   - Trabecular architecture\n"
-            "III. Bone Cells and Remodeling (15 min)\n"
-            "   - Osteoblasts, osteoclasts, osteocytes\n"
-            "   - Remodeling cycle\n"
-            "IV. Clinical Connections & Wrap-up (10 min)\n"
-            "   - Osteoporosis as a remodeling imbalance\n"
-            "   - Review questions"
-        ),
-        keyConcepts=[
-            "Compact bone vs. spongy bone architecture",
-            "Osteon as the structural unit of compact bone",
-            "Bone remodeling cycle: osteoblast and osteoclast roles",
-        ],
-        misconceptions=[
-            "Bones are static, non-living structures",
-            "Spongy bone is weaker and less important than compact bone",
-        ],
-        checksForUnderstanding=[
-            "Compare and contrast the structure of compact and spongy bone.",
-            "Explain how osteoblasts and osteoclasts maintain bone homeostasis.",
-        ],
-        activityIdeas=[
-            "5-min think-pair-share: predict what happens when osteoclast activity exceeds osteoblast activity",
-            "Label a diagram of an osteon with key structures",
-        ],
-        slideOutline=(
-            "Slide 1: Title — Bone Structure & Remodeling\n"
-            "Slide 2: Learning Objective\n"
-            "Slide 3: Compact vs. Spongy Bone (diagram)\n"
-            "Slide 4: The Osteon — Labeled Cross-Section\n"
-            "Slide 5: Bone Cells Overview\n"
-            "Slide 6: Remodeling Cycle\n"
-            "Slide 7: Clinical Connection — Osteoporosis\n"
-            "Slide 8: Review Questions"
-        )
-        if body.content_type.value == "ppt"
-        else None,
-        citations=_MOCK_CITATIONS,
-    )
+    """Retrieve grounded passages, then generate a structured lesson outline."""
+    strategy = get_lesson_outline_strategy_by_template_id(body.template)
+    pipeline = LessonOutlinePipeline(retriever, Generator(llm, strategy))
+    try:
+        return await pipeline.run(body)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Lesson outline generation failed: {e}",
+        ) from e
 
 
 @router.post("/generate/assessment-transform")
@@ -90,7 +62,7 @@ def generate_assessment_transform(
 ) -> AssessmentTransformResponse:
     """Return a mock assessment transformation. Swap for real generation later."""
     return AssessmentTransformResponse(
-        openEndedQuestion=(
+        open_ended_question=(
             "Explain the functional relationship between osteoblasts and "
             "osteoclasts in bone remodeling. What happens at the cellular "
             "level when this balance is disrupted?"
@@ -107,7 +79,7 @@ def generate_assessment_transform(
             "| Use of Evidence | Cites specific structures and processes | "
             "Some specific references | Generic statements | No supporting detail |"
         ),
-        expectedResponseOutline=(
+        expected_response_outline=(
             "A strong response should: (1) define osteoblasts as bone-forming "
             "cells and osteoclasts as bone-resorbing cells; (2) describe the "
             "remodeling cycle as a coupled process; (3) explain that disruption "
@@ -120,5 +92,5 @@ def generate_assessment_transform(
             "Osteoblasts and osteoclasts perform the same function",
             "Osteoporosis is caused only by calcium deficiency",
         ],
-        citations=_MOCK_CITATIONS,
+        citations=_ASSESSMENT_MOCK_CITATIONS,
     )

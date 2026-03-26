@@ -8,7 +8,7 @@ You are an instructional designer. Use only the retrieved context below to groun
 - Section: {section}
 - Sub-section: {sub_section}
 - Book (if any): {book}
-- Desired duration (minutes): {count}
+- Numeric target: {count} (minutes for `lecture_notes`, slide count for `ppt` — see **Format** block above)
 
 ## Retrieved context
 Passages are numbered starting at **0**. The index in each heading is the **ref** value for linking (same order as returned from search).
@@ -21,7 +21,8 @@ When a sentence or phrase is **directly supported** by a specific passage above,
 - Format: ``<grounded ref="INDEX">…verbatim text from that passage…</grounded>``
 - ``INDEX`` is the 0-based passage number shown in the heading (e.g. ``### Passage [0]`` → ``ref="0"``).
 - Copy the inner text **verbatim** from that passage (no paraphrase inside the tag).
-- Use tags in string fields where it helps (e.g. ``outline``); do not break JSON structure.
+- Use this **same** tag format in **every** long string field where you cite a passage: ``outline``, ``slideOutline`` (each slide’s bullets/cues), and optionally bullets inside ``keyConcepts`` / other arrays. **Do not** use alternate markers such as ``[Ref 4]``, ``[Ref 2, 5]``, or footnote-style refs—the client only recognizes ``<grounded>`` tags.
+- Do not break JSON structure (escape quotes inside strings as required).
 
 The client can map ``ref`` to the same-index passage (and its metadata / citations) for styling or future deep links.
 
@@ -32,7 +33,7 @@ Return a single JSON object with these keys (use exactly these names):
 - "misconceptions" (array of strings)
 - "checksForUnderstanding" (array of strings)
 - "activityIdeas" (array of strings)
-- "slideOutline" (string or null): use a non-empty string only when content type is "ppt"; otherwise null.
+- "slideOutline" (string or null): exactly as required by the **Format** block above for this request’s content type.
 
 Do not include a "citations" key; citations are added by the system.
 

@@ -41,9 +41,24 @@ None required for health check. See `.env.example` in repo root for all availabl
 4. **No Docker:** `pip install -r requirements.txt` then `uvicorn app.main:app --reload`
 5. Verify: `curl http://localhost:8000/health` returns `{"status":"ok"}`
 
+### RAG pipeline (lesson outline)
+
+The **engine** implements lesson-outline RAG in-process (see `app/core/rag/`):
+
+| Piece | Role |
+|-------|------|
+| `Retriever` | Embeds a semantic query string, runs pgvector similarity search with optional `VectorMetadataFilter` (chapter, section, sub-section prefix, book substring on `title`). |
+| `Generator` | Builds chat turns via a `LessonOutlinePromptStrategy`, calls `LLMProvider.complete`, parses JSON into `LessonOutlineGeneratedBody`, attaches `citations` from chunk metadata. |
+| `LessonOutlinePipeline` | `build_embedding_query()` = learning objective + audience + session length; `metadata_filter_for_request()` = structural fields from `LessonOutlineRequest`. |
+| `app/core/rag/prompts/` | Pluggable strategies + `default_lesson_outline.md` (`.format()` placeholders, `{retrieved_context}`, optional `<grounded ref="N">` for UI). |
+
+**HTTP vs engine:** `POST /generate/lesson-outline` in `app/api/generate.py` still returns **mock** JSON for contract smoke tests. It does **not** call the pipeline yet. To exercise RAG: run `pytest tests/core/rag/` (mocked deps) or wire the route / a script to `LessonOutlinePipeline` + `get_*` providers.
+
+**LLM:** With `LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` set, `get_llm_provider()` returns `AnthropicLLMProvider` (`anthropic` SDK ≥ 0.80, `AsyncAnthropic.messages.create`).
+
 ### Testing (full coverage including DB)
 
-To run **all** tests, including the pgvector adapter tests (4 tests that hit Postgres), do the following in order:
+To run **all** tests, including the **pgvector** integration tests (Postgres + SQL metadata filters), do the following in order:
 
 1. **Start the database:** From the repo root, run:
    ```bash
@@ -57,9 +72,11 @@ To run **all** tests, including the pgvector adapter tests (4 tests that hit Pos
    ```bash
    pytest
    ```
-   Pytest loads `.env` automatically (see `tests/conftest.py`), so the pgvector tests will run and you should see **68 tests** (64 passed + 4 pgvector). If the db is not running or `DATABASE_URL` is missing, the 4 pgvector tests are **skipped** and you’ll see 64 passed, 4 skipped.
+   Pytest loads `.env` automatically (see `tests/conftest.py`). If the DB is up and `DATABASE_URL` is set, **pgvector-marked** tests run; if not, they are **skipped**. Run `pytest` (or `pytest -q`) and check the summary for passed vs skipped. Typical full run is on the order of **90+** collected tests.
 
 To run only the pgvector tests: `pytest -m pgvector -v`.
+
+RAG unit/integration tests (mocked vector store + LLM): `pytest tests/core/rag/ -v`.
 
 ### Ingesting a sample book chapter
 
@@ -132,4 +149,4 @@ Optional speed knobs (dev only):
 
 ---
 
-*Last updated: 2026-03-04. Keep this doc in sync with the backend and deploy process.*
+*Last updated: 2026-03-17. Keep this doc in sync with the backend and deploy process.*

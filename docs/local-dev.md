@@ -159,3 +159,12 @@ WHERE metadata->>'source_key' = 'eepsam.pdf'
 LIMIT 5;
 ```
 
+---
+
+## 7. RAG pipeline and generate endpoint
+
+- **In-process RAG** lives under `app/core/rag/` (`Retriever`, `Generator`, `LessonOutlinePipeline`, `prompts/`). After ingestion, chunks carry `chapter`, `section`, and `title` metadata used for **vector query filters** and **citations**. The semantic search query is built from the learning objective plus audience and duration (not from chapter labels alone).
+- **Tests:** `pytest tests/core/rag/` (no live LLM; mocked store and LLM). With Postgres up: `pytest tests/db/vector/test_pgvector.py -m pgvector` also covers **metadata filter SQL** on pgvector.
+- **Anthropic:** Install deps with `pip install -r requirements.txt` (includes `anthropic>=0.80` for `LLM_PROVIDER=anthropic`). Set `ANTHROPIC_API_KEY` in `.env`.
+- **`POST /generate/lesson-outline`:** The FastAPI route still returns **fixed mock JSON** for OpenAPI/contract checks. It does **not** invoke the RAG pipeline yet; wire the handler to `LessonOutlinePipeline` when you want curl/Postman to hit real retrieval + Claude.
+

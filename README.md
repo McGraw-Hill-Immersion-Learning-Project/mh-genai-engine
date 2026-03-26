@@ -26,10 +26,10 @@ Content-grounded GenAI **Engine** (Project A) for McGraw Hill’s Instructor Too
 ```
 .github/                 # Issue and PR templates
 app/                     # FastAPI backend
-  api/                   # HTTP routers (health, future endpoints)
-  core/                  # Business logic: rag/, ingestion/
-  providers/             # LLM, embeddings, storage adapters 
-  db/                    # Vector store
+  api/                   # HTTP routers (health, generate, templates)
+  core/                  # Business logic: rag/ (retriever, generator, pipeline, prompts), ingestion/
+  providers/             # LLM, embeddings, storage adapters
+  db/                    # Vector store (pgvector; optional metadata filters on query)
   models/                # Pydantic schemas
   config.py              # Settings from .env
 data/                    # Document storage: raw/, processed/, samples/
@@ -49,6 +49,8 @@ CHANGELOG.md             # General project changelog
 Run locally: `cp .env.example .env` then `docker compose up --build`. Verify: `curl http://localhost:8000/health`.
 
 **Tests (full coverage):** Start the DB with `docker compose up db -d`, ensure `.env` has `DATABASE_URL` (default in `.env.example`), then run `pytest`. See [docs/runbook.md](docs/runbook.md#testing-full-coverage-including-db) for details.
+
+**RAG (lesson outline):** The engine includes `Retriever`, `Generator`, `LessonOutlinePipeline`, and pluggable prompts under `app/core/rag/prompts/`. Vector search supports **metadata filters** (chapter, section, book, etc.) in Postgres. The **`POST /generate/lesson-outline` HTTP handler still returns mock JSON** until wired to the pipeline; use tests or an in-process call to exercise RAG. See [runbook — RAG pipeline](docs/runbook.md#rag-pipeline-lesson-outline).
 
 **Ingest a sample chapter:** Put a PDF in `data/raw/`, then `python scripts/ingest.py run <filename>`. Use `python scripts/ingest.py list` to see files. Requires a running DB and either `VOYAGE_API_KEY` (production‑like) or the local dev embedding provider (`EMBEDDING_PROVIDER=dev`, no API key). See [local dev guide](docs/local-dev.md) and [runbook – Ingesting a sample book chapter](docs/runbook.md#ingesting-a-sample-book-chapter).
 

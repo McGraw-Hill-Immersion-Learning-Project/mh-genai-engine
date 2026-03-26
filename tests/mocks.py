@@ -1,5 +1,33 @@
 """Shared test fakes for ingestion and RAG tests."""
 
+import json
+
+from app.db.vector.filters import VectorMetadataFilter
+
+
+_FAKE_LESSON_OUTLINE_JSON = json.dumps(
+    {
+        "outline": "I. Intro\nII. Main ideas\nIII. Wrap-up",
+        "keyConcepts": ["Concept A", "Concept B"],
+        "misconceptions": ["Common mistake"],
+        "checksForUnderstanding": ["Question 1?"],
+        "activityIdeas": ["Pair discussion"],
+        "slideOutline": None,
+    }
+)
+
+
+class FakeLLMProvider:
+    """Returns a fixed JSON lesson outline. Records complete() calls."""
+
+    def __init__(self, response_text: str | None = None) -> None:
+        self.response_text = response_text or _FAKE_LESSON_OUTLINE_JSON
+        self.calls: list[list[dict[str, str]]] = []
+
+    async def complete(self, messages: list[dict[str, str]]) -> str:
+        self.calls.append(messages)
+        return self.response_text
+
 
 class FakeEmbeddingProvider:
     """Returns fixed-dimension zero vectors. No API calls."""
@@ -47,6 +75,8 @@ class InMemoryVectorStore:
         self,
         embedding: list[float],
         n_results: int = 10,
+        *,
+        metadata_filter: VectorMetadataFilter | None = None,
     ) -> list[dict]:
         # Cosine similarity with zero vectors: all distances are 0
         results = []
@@ -55,6 +85,9 @@ class InMemoryVectorStore:
         ):
             if len(results) >= n_results:
                 break
+            if metadata_filter is not None and metadata_filter.has_any():
+                if not _in_memory_metadata_matches(meta, metadata_filter):
+                    continue
             results.append(
                 {
                     "id": doc_id,
@@ -97,3 +130,21 @@ class InMemoryVectorStore:
 
     async def ensure_index(self) -> None:
         pass
+
+
+def _in_memory_metadata_matches(meta: dict, f: VectorMetadataFilter) -> bool:
+    if f.chapter is not None and str(f.chapter).strip():
+        if str(meta.get("chapter") or "") != f.chapter:
+            return False
+    if f.section is not None and str(f.section).strip():
+        if str(meta.get("section") or "") != f.section:
+            return False
+    if f.sub_section is not None and str(f.sub_section).strip():
+        sec = str(meta.get("section") or "")
+        if not sec.startswith(f.sub_section):
+            return False
+    if f.book is not None and str(f.book).strip():
+        title = str(meta.get("title") or "").lower()
+        if f.book.lower() not in title:
+            return False
+    return True

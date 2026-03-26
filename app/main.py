@@ -2,9 +2,11 @@
 
 import logging
 import os
+import warnings
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from pydantic.warnings import UnsupportedFieldAttributeWarning
 
 from app.api import health
 from app.api import generate
@@ -14,6 +16,11 @@ from app.providers import get_vector_store
 from app.utils import get_logger
 
 logger = get_logger(__name__)
+
+# Pydantic 2.12 + FastAPI request-body validation can emit spurious
+# ``UnsupportedFieldAttributeWarning`` for ``alias_generator`` on models with
+# optional fields; validation and aliases still behave correctly.
+warnings.filterwarnings("ignore", category=UnsupportedFieldAttributeWarning)
 
 
 def _configure_logging() -> None:

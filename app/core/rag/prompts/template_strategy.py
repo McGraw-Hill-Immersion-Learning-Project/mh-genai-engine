@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-
-from app.models.generate import LessonOutlineRequest
+from typing import TYPE_CHECKING
 
 from app.core.rag.retriever import RetrievedChunk
+
+if TYPE_CHECKING:
+    from app.models.generate import LessonOutlineRequest
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 

@@ -13,11 +13,12 @@ Contract (enforced by Generator, documented here for prompt authors):
 
 from __future__ import annotations
 
-from typing import Protocol
-
-from app.models.generate import LessonOutlineRequest
+from typing import TYPE_CHECKING, Protocol
 
 from app.core.rag.retriever import RetrievedChunk
+
+if TYPE_CHECKING:
+    from app.models.generate import LessonOutlineRequest
 
 
 class LessonOutlinePromptStrategy(Protocol):

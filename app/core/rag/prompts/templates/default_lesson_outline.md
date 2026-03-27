@@ -22,6 +22,7 @@ When a sentence or phrase is **directly supported** by a specific passage above,
 - ``INDEX`` is the 0-based passage number shown in the heading (e.g. ``### Passage [0]`` → ``ref="0"``).
 - Copy the inner text **verbatim** from that passage (no paraphrase inside the tag).
 - Use this **same** tag format in **every** long string field where you cite a passage: ``outline``, ``slideOutline`` (each slide’s bullets/cues), and optionally bullets inside ``keyConcepts`` / other arrays. **Do not** use alternate markers such as ``[Ref 4]``, ``[Ref 2, 5]``, or footnote-style refs—the client only recognizes ``<grounded>`` tags.
+- **JSON string safety:** Inside any JSON string value, **do not** use a raw ASCII double-quote (``"``) for dialogue or emphasis—it terminates the string. Use **single quotes** for quoted speech (e.g. ``> 'Imagine a market…'``) or omit quotes. You must still escape backslashes as needed. Grounding tags may use ``ref="0"`` only if every ``"`` inside that string value is written as ``\"`` in the JSON.
 - Do not break JSON structure (escape quotes inside strings as required).
 
 The client can map ``ref`` to the same-index passage (and its metadata / citations) for styling or future deep links.

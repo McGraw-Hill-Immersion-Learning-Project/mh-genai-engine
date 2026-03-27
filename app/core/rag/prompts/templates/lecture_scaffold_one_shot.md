@@ -46,6 +46,7 @@ When a sentence or phrase is **directly supported** by a specific passage above,
 - ``INDEX`` is the 0-based passage number shown in the heading (e.g. ``### Passage [0]`` → ``ref="0"``).
 - Copy the inner text **verbatim** from that passage (no paraphrase inside the tag).
 - Use this **same** tag format in ``outline``, ``slideOutline`` (slide-by-slide text for ``ppt``), and optionally per-item strings in ``keyConcepts`` / other arrays. **Do not** use ``[Ref N]`` or similar—the client only recognizes ``<grounded>`` tags.
+- **JSON string safety:** Do not put raw ``"`` characters inside JSON string values for dialogue (e.g. blockquotes); use single quotes instead. Unescaped ``"`` breaks parsing.
 - Do not break JSON structure.
 
 If no passages were retrieved, say so briefly in the outline and keep claims generic.

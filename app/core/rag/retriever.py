@@ -80,3 +80,17 @@ class Retriever:
             )
         logger.debug("vector_retrieve_query=%r", query)
         return chunks
+
+    async def retrieve_by_ids(self, ids: list[str]) -> list[RetrievedChunk]:
+        """Load chunks by primary key (no embedding). Order matches *ids* for found rows."""
+        rows = await self._vector_store.get_by_ids(ids)
+        chunks = [
+            RetrievedChunk(content=row["content"], metadata=dict(row.get("metadata") or {}))
+            for row in rows
+        ]
+        logger.info(
+            "vector_retrieve_by_ids requested=%d n_chunks=%d",
+            len(ids),
+            len(chunks),
+        )
+        return chunks

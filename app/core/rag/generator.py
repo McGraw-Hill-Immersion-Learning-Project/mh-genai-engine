@@ -11,12 +11,17 @@ from app.models.generate import (
     Citation,
     ContentType,
     LessonOutlineGeneratedBody,
+    LessonOutlineRegenerateRequest,
     LessonOutlineRequest,
     LessonOutlineResponse,
 )
+from app.db.vector.ids import chunk_document_id
 from app.providers.llm.base import LLMProvider
 
-from app.core.rag.prompts.base import LessonOutlinePromptStrategy
+from app.core.rag.prompts.base import (
+    LessonOutlinePromptStrategy,
+    LessonOutlineRefinementPromptStrategy,
+)
 from app.core.rag.retriever import RetrievedChunk
 from app.utils import get_logger
 
@@ -56,20 +61,50 @@ def _strip_json_fence(text: str) -> str:
     return stripped
 
 
+def _repair_unescaped_blockquote_dialogue_quotes(text: str) -> str:
+    """Escape ``"`` that opens dialogue after Markdown blockquotes (common LLM mistake).
+
+    Models often emit ``> "Imagine ...`` inside a JSON string; the bare ``"`` ends the
+    JSON string early. A backslash before that quote restores valid JSON.
+    """
+    return re.sub(
+        r'(>\s+)"([A-Za-z0-9])',
+        lambda m: m.group(1) + '\\"' + m.group(2),
+        text,
+    )
+
+
 def parse_lesson_outline_llm_json(raw: str) -> LessonOutlineGeneratedBody:
     """Parse model output into the body-only schema (strips ``citations`` if present)."""
     text = _strip_json_fence(raw)
+    first_err: json.JSONDecodeError | None = None
     try:
         data = json.loads(text)
     except json.JSONDecodeError as e:
-        pos = getattr(e, "pos", None)
+        first_err = e
+        repaired = _repair_unescaped_blockquote_dialogue_quotes(text)
+        if repaired != text:
+            try:
+                data = json.loads(repaired)
+            except json.JSONDecodeError:
+                data = None
+            else:
+                logger.info(
+                    "lesson_outline_llm_json_repaired_unescaped_blockquote_dialogue_quotes"
+                )
+        else:
+            data = None
+
+    if not isinstance(data, dict):
+        assert first_err is not None
+        pos = getattr(first_err, "pos", None)
         logger.warning(
             "lesson_outline_llm_json_decode_failed: %s\n%s\nraw_after_fence_preview:\n%s",
-            e,
+            first_err,
             _snippet_at_index(text, pos),
             _preview_text(text, head=1800, tail=1800),
         )
-        raise ValueError(f"LLM output is not valid JSON: {e}") from e
+        raise ValueError(f"LLM output is not valid JSON: {first_err}") from first_err
     if not isinstance(data, dict):
         raise ValueError("LLM JSON root must be an object")
     data.pop("citations", None)
@@ -99,10 +134,11 @@ def _bibliographic_fields(metadata: dict) -> tuple[str, str | None, str, str | N
 def citations_from_chunks(chunks: list[RetrievedChunk]) -> list[Citation]:
     """One citation per chunk, same order as ``### Passage [i]`` / ``ref=\"i\"``."""
     out: list[Citation] = []
-    for ch in chunks:
+    for i, ch in enumerate(chunks):
         title, page, chapter, section = _bibliographic_fields(ch.metadata)
         out.append(
             Citation(
+                chunk_id=chunk_document_id(ch.metadata, i),
                 title=title,
                 page=page,
                 chapter=chapter,
@@ -149,6 +185,40 @@ class Generator:
 
         slide_outline = body.slide_outline
         if request.content_type != ContentType.PPT:
+            slide_outline = None
+
+        citations = citations_from_chunks(chunks)
+        fields = body.model_dump(mode="python")
+        fields["slide_outline"] = slide_outline
+        return LessonOutlineResponse(**fields, citations=citations)
+
+    async def regenerate(
+        self,
+        chunks: list[RetrievedChunk],
+        request: LessonOutlineRegenerateRequest,
+        refinement_strategy: LessonOutlineRefinementPromptStrategy,
+    ) -> LessonOutlineResponse:
+        """LLM refines ``request.previous_outline`` using the same JSON + citation contract as :meth:`generate`."""
+        messages = refinement_strategy.build_messages(request, chunks)
+        for m in messages:
+            logger.info(
+                "lesson_outline_refinement_llm_message role=%s content_length=%d",
+                m.get("role"),
+                len(m.get("content") or ""),
+            )
+        joined = "\n".join(
+            f"[{m.get('role')}]\n{m.get('content', '')}" for m in messages
+        )
+        logger.debug("lesson_outline_refinement_llm_messages_full:\n%s", joined)
+
+        raw = await self._llm.complete(messages)
+        logger.info("lesson_outline_refinement_llm_completion length=%d", len(raw))
+        logger.debug("lesson_outline_refinement_llm_completion_raw:\n%s", raw)
+
+        body = parse_lesson_outline_llm_json(raw)
+
+        slide_outline = body.slide_outline
+        if request.resolved_content_type() != ContentType.PPT:
             slide_outline = None
 
         citations = citations_from_chunks(chunks)

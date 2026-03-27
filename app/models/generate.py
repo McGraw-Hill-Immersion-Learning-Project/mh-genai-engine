@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 from app.core.rag.prompts.registry import lesson_outline_template_api_ids
+from app.db.vector.filters import VectorMetadataFilter
 from app.utils import normalize_citation_snippet_text
 
 CITATION_SNIPPET_MAX_LEN = 50
@@ -29,6 +30,9 @@ class AudienceLevel(str, Enum):
 class Citation(BaseModel):
     """One row per retrieved chunk; ``citations[i]`` aligns with ``<grounded ref=\"i\">``."""
 
+    chunk_id: str = Field(
+        description="Vector store row id (source_key + '_' + chunk_id from ingestion metadata).",
+    )
     title: str
     page: str | None = None
     chapter: str
@@ -48,6 +52,8 @@ class Citation(BaseModel):
             return ""
         s = normalize_citation_snippet_text(str(v))
         return s[:CITATION_SNIPPET_MAX_LEN]
+
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
 
 
 class LessonOutlineRequest(BaseModel):
@@ -99,6 +105,28 @@ class LessonOutlineResponse(LessonOutlineGeneratedBody):
         alias_generator=to_camel,
         by_alias=True,
     )
+
+
+class LessonOutlineRegenerateRequest(BaseModel):
+    """Request for ``POST /generate/lesson-outline/regenerate``.
+
+    ``previous_outline`` and ``refinement_instructions`` are required. Optional
+    ``chunk_ids`` selects passages by stable vector ids from a prior response;
+    omit or send an empty list to use embedding retrieval with no metadata filters.
+    """
+
+    previous_outline: LessonOutlineGeneratedBody
+    refinement_instructions: str
+    chunk_ids: list[str] | None = None
+
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
+
+    def resolved_content_type(self) -> ContentType:
+        """Output mode for format rules and ``slide_outline`` (from prior outline only)."""
+        so = self.previous_outline.slide_outline
+        if so is not None and str(so).strip():
+            return ContentType.PPT
+        return ContentType.LECTURE_NOTES
 
 
 class AssessmentTransformRequest(BaseModel):

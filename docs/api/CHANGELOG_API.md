@@ -12,6 +12,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 (Omit until the next release.)
 
+## [0.6.1] - 2026-03-27
+
+### Changed
+
+- **`LessonOutlineRequest.book`:** vector retrieval filter now matches a case-insensitive substring on chunk **`metadata.title`** **or** **`metadata.source_key`**. This covers OER PDFs with empty embedded document titles (e.g. `book: "eepsam"` matches rows whose ingest key is `eepsam.pdf`). See `docs/ingestion-plan.md` and `docs/runbook.md`.
+
+## [0.6.0] - 2026-03-26
+
+### Added
+
+- **`Citation.chunkId`:** required string — stable vector row id (``source_key`` + ``_`` + ``chunk_id`` from ingestion). Clients may echo values in ``LessonOutlineRegenerateRequest.chunkIds`` for deterministic retrieval.
+- **`LessonOutlineRegenerateRequest.chunkIds`:** optional string array; when non-empty, the Engine loads those chunks by id (no embed/search). Empty array is treated like omitted.
+
+### Changed
+
+- **`LessonOutlineRegenerateRequest`:** only ``previousOutline``, ``refinementInstructions``, and optional ``chunkIds``. Scope/template/filter fields from generate are **not** accepted on regenerate (use generate for those).
+- **Regenerate retrieval:** without ``chunkIds``, embedding query is ``refinementInstructions`` plus a slice of the prior ``outline``, with **no** metadata filters.
+
+### Migration notes
+
+- **Breaking:** every ``Citation`` must include ``chunkId``; regenerate body is slimmer — remove extra generate fields from regenerate calls.
+- **422:** unknown or stale ``chunkIds`` when the array is non-empty.
+
+## [0.5.0] - 2026-03-26
+
+### Added
+
+- **`POST /generate/lesson-outline/regenerate`:** accepts ``LessonOutlineRegenerateRequest`` — **required** fields are only ``previousOutline`` and ``refinementInstructions``. Optional fields match generate when you want the same filters or richer embedding text; when omitted, retrieval uses instructions + prior outline text and no metadata filters unless set. ``contentType`` defaults from ``previousOutline.slideOutline``. Dedicated **refinement** system prompt; response is ``LessonOutlineResponse`` (citations from the new retrieval pass).
+- **Schemas:** ``LessonOutlineRegenerateRequest``, ``LessonOutlineGeneratedBody`` (documented in ``docs/api/openapi.yaml``).
+
 ## [0.4.0] - 2026-03-26
 
 ### Added

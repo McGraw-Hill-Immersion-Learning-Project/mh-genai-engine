@@ -61,7 +61,7 @@ This document tracks fields, endpoints, and behaviors that are **explicitly defe
 
 ### Lesson outline: HTTP handler vs in-process RAG engine
 
-- **Engine:** `LessonOutlinePipeline` + `Retriever` + `Generator` + pluggable prompts under `app/core/rag/`. Retrieval uses pgvector with optional metadata filters aligned to `LessonOutlineRequest` (chapter, section, subSection, book). Chunks are passed through **in retrieval order** (no merge/dedup). LLM output is parsed into `LessonOutlineGeneratedBody`; **`citations`** are always attached from chunk metadata (one row per chunk; optional `citations` in model JSON is ignored).
+- **Engine:** `LessonOutlinePipeline` + `Retriever` + `Generator` + pluggable prompts under `app/core/rag/`. Retrieval uses pgvector with optional metadata filters aligned to `LessonOutlineRequest` (chapter, section, subSection, **`book`**). **`book`** matches a case-insensitive substring on chunk **`metadata.title` *or* `metadata.source_key`** (so empty PDF titles still allow scoping by ingest key). Chunks are passed through **in retrieval order** (no merge/dedup). LLM output is parsed into `LessonOutlineGeneratedBody`; **`citations`** are always attached from chunk metadata (one row per chunk, each with **`chunkId`**; optional `citations` in model JSON is ignored). **`POST /generate/lesson-outline/regenerate`** uses the same citation shape; optional **`chunkIds`** select chunks by id (see OpenAPI spec `info.version` and `CHANGELOG_API.md`).
 - **Prompt templates:** `LessonOutlineRequest.template` (kebab-case) selects the lesson-outline system prompt; values match ``GET /templates/lesson-outline``. `get_lesson_outline_strategy_by_template_id` maps to markdown under `app/core/rag/prompts/templates/`. **`contentType`** selects format rules from `app/core/rag/prompts/rules/` (`format_lecture_notes.md` vs `format_ppt.md`).
 - **HTTP:** `POST /generate/lesson-outline` in `app/api/generate.py` calls the pipeline using **`get_retriever`** / **`get_llm`** from `app/deps.py`. Requires `DATABASE_URL`, embedding configuration, indexed OER content, and LLM credentials (e.g. `ANTHROPIC_API_KEY`) for real runs. **502** when the model returns invalid JSON. **`POST /generate/assessment-transform`** remains a **mock** placeholder until Workflow 2 is specified.
 
@@ -80,6 +80,7 @@ This document tracks fields, endpoints, and behaviors that are **explicitly defe
 
 ## Changelog
 
+- **2026-03-27:** Documented **`book`** filter on **title or `source_key`**; **`chunkId`** on citations; regenerate **`chunkIds`**; per-request **`REQUEST_TIMEOUT_SECONDS`** (**504**) — see runbook, local-dev §7, ingestion-plan, `CHANGELOG_API.md` **v0.6.1**.
 - **2026-03-26 (later):** Documented **wired** `POST /generate/lesson-outline`, `app/deps.py`, format `rules/`, citation order + **`snippet`**, grounding tags in **`slideOutline`**, API **v0.4.0** / `CHANGELOG_API.md`.
 - **2026-03-26:** Documented lesson-outline prompt registry (`get_lesson_outline_strategy`, `templates/*.md`, `TemplatedLessonOutlineStrategy`).
 - **2026-03-17:** Clarified lesson-outline HTTP vs in-process RAG engine (`app/core/rag/`); citations and metadata filtering behavior documented for Team B alignment.

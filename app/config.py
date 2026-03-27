@@ -1,6 +1,6 @@
 """Application settings loaded from environment variables and .env file."""
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -36,6 +36,16 @@ class Settings(BaseSettings):
     database_url: str = ""
 
     # Ingestion config
+    # Docling PDF: set false for text-native PDFs to skip OCR (faster); true for scans.
+    do_ocr: bool = True
+    # Docling: false skips table-structure model (faster; tables become plain layout).
+    do_table_structure: bool = True
+    # Docling threaded pipeline throughput vs RAM (lower = safer on large PDFs).
+    docling_ocr_batch_size: int = Field(default=4, ge=1)
+    docling_layout_batch_size: int = Field(default=4, ge=1)
+    docling_table_batch_size: int = Field(default=4, ge=1)
+    docling_queue_max_size: int = Field(default=16, ge=1)
+
     chunk_size: int = 500
     chunk_overlap: int = 50
     embedding_batch_size: int = 64

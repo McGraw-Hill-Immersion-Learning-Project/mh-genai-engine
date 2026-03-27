@@ -9,6 +9,7 @@ from fastapi import FastAPI
 
 from app.api import health
 from app.api import generate
+from app.api import ingest
 from app.api import templates
 from app.deps import get_settings
 from app.middleware.timeout import RequestTimeoutMiddleware
@@ -82,6 +83,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(templates.router)
     app.include_router(generate.router)
+    app.include_router(ingest.router)
     return app
 
 

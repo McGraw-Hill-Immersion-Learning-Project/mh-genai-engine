@@ -35,8 +35,14 @@ class LocalStorageProvider:
         return await asyncio.to_thread(_list)
 
     async def put(self, key: str, data: bytes) -> None:
-        """Write bytes to a file by key."""
-        raise NotImplementedError("LocalStorageProvider.put() not implemented")
+        """Write bytes to a file by key, creating parent directories as needed."""
+        path = self._base_path / key
+        await asyncio.to_thread(self._write, path, data)
+
+    @staticmethod
+    def _write(path: Path, data: bytes) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
 
     async def delete(self, key: str) -> None:
         """Delete a file by key."""

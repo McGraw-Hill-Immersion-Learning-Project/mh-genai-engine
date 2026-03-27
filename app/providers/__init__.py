@@ -95,8 +95,18 @@ def get_storage_provider(settings: Settings) -> StorageProvider:
 
         return LocalStorageProvider(base_path=settings.storage_local_path)
 
+    if provider == "s3":
+        if not settings.s3_bucket:
+            raise ValueError("S3_BUCKET is required when STORAGE_PROVIDER=s3")
+        from app.providers.storage.s3 import S3StorageProvider
+
+        return S3StorageProvider(
+            bucket=settings.s3_bucket,
+            region=settings.s3_region,
+        )
+
     raise ValueError(
-        f"Unknown storage provider: {provider!r}. Supported: 'local'."
+        f"Unknown storage provider: {provider!r}. Supported: 'local', 's3'."
     )
 
 

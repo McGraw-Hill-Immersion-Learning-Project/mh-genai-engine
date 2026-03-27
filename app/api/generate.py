@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Annotated
 
+from app.core.guardrails import guardrails
 from app.core.rag.generator import Generator
 from app.core.rag.pipeline import LessonOutlinePipeline
 from app.core.rag.prompts.registry import get_lesson_outline_strategy_by_template_id
@@ -45,6 +46,10 @@ async def generate_lesson_outline(
     llm: Annotated[LLMProvider, Depends(get_llm)],
 ) -> LessonOutlineResponse:
     """Retrieve grounded passages, then generate a structured lesson outline."""
+    result = guardrails.check(body.learning_objective)
+    if not result.allowed:
+        raise HTTPException(status_code=400, detail=result.message)
+
     strategy = get_lesson_outline_strategy_by_template_id(body.template)
     pipeline = LessonOutlinePipeline(retriever, Generator(llm, strategy))
     try:

@@ -92,6 +92,26 @@ async def test_retrieve_normalizes_missing_metadata() -> None:
 
 
 @pytest.mark.asyncio
+async def test_retrieve_by_ids_returns_chunks_in_order() -> None:
+    class ByIdsStore:
+        async def get_by_ids(self, ids: list[str]) -> list[dict]:
+            return [
+                {"id": "a", "content": "one", "metadata": {"chapter": "1"}},
+                {"id": "b", "content": "two", "metadata": {"chapter": "2"}},
+            ]
+
+    class NoEmbed:
+        async def embed(self, texts: list[str]) -> list[list[float]]:
+            raise AssertionError("embed should not be called")
+
+    r = Retriever(NoEmbed(), ByIdsStore())
+    chunks = await r.retrieve_by_ids(["a", "b"])
+    assert len(chunks) == 2
+    assert chunks[0].content == "one" and chunks[1].content == "two"
+    assert chunks[0].metadata["chapter"] == "1"
+
+
+@pytest.mark.asyncio
 async def test_retrieve_forwards_metadata_filter_to_vector_store() -> None:
     captured: list[VectorMetadataFilter | None] = []
 

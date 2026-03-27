@@ -49,6 +49,7 @@ async def test_pipeline_retrieves_then_generates_with_grounded_citations() -> No
     assert resp.outline.startswith("I. Intro")
     assert len(resp.citations) == 1
     assert resp.citations[0].title == "Integration Textbook"
+    assert resp.citations[0].chunk_id == "int.pdf_a"
     assert resp.citations[0].page == "55"
     assert resp.citations[0].chapter == "4"
     assert resp.citations[0].section == "4.2"

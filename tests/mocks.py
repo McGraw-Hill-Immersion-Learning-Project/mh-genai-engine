@@ -4,6 +4,7 @@ import asyncio
 import json
 
 from app.db.vector.filters import VectorMetadataFilter
+from app.db.vector.ids import chunk_document_id
 
 
 _FAKE_LESSON_OUTLINE_JSON = json.dumps(
@@ -27,6 +28,34 @@ class FakeLLMProvider:
 
     async def complete(self, messages: list[dict[str, str]]) -> str:
         self.calls.append(messages)
+        return self.response_text
+
+
+_REFINED_LESSON_OUTLINE_JSON = json.dumps(
+    {
+        "outline": "REFINED: I. Intro with warm-up\nII. Main ideas\nIII. Wrap-up",
+        "keyConcepts": ["Concept A", "Concept B", "Warm-up"],
+        "misconceptions": ["Common mistake"],
+        "checksForUnderstanding": ["Question 1?"],
+        "activityIdeas": ["Pair discussion", "Think-pair-share"],
+        "slideOutline": None,
+    }
+)
+
+
+class RefinementDistinctFakeLLMProvider(FakeLLMProvider):
+    """Returns generate-shaped JSON for create prompts, distinct JSON when system prompt is refinement."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.response_text = _FAKE_LESSON_OUTLINE_JSON
+
+    async def complete(self, messages: list[dict[str, str]]) -> str:
+        self.calls.append(messages)
+        system = (messages[0].get("content") or "") if messages else ""
+        low = system.lower()
+        if "refining" in low and "existing lesson outline" in low:
+            return _REFINED_LESSON_OUTLINE_JSON
         return self.response_text
 
 
@@ -83,15 +112,33 @@ class InMemoryVectorStore:
         for i, (doc, emb, meta) in enumerate(
             zip(documents, embeddings, metadatas)
         ):
-            source_key = meta.get("source_key", "")
-            chunk_id = meta.get("chunk_id", i)
-            doc_id = f"{source_key}_{chunk_id}"
+            doc_id = chunk_document_id(meta, i)
             ids.append(doc_id)
             self.ids.append(doc_id)
             self.documents.append(doc)
             self.embeddings.append(emb)
             self.metadatas.append(meta)
         return ids
+
+    async def get_by_ids(self, ids: list[str]) -> list[dict]:
+        """Rows in *ids* order; first occurrence wins when duplicate ids exist."""
+        first_index: dict[str, int] = {}
+        for i, doc_id in enumerate(self.ids):
+            if doc_id not in first_index:
+                first_index[doc_id] = i
+        out: list[dict] = []
+        for doc_id in ids:
+            idx = first_index.get(doc_id)
+            if idx is None:
+                continue
+            out.append(
+                {
+                    "id": doc_id,
+                    "content": self.documents[idx],
+                    "metadata": dict(self.metadatas[idx]),
+                }
+            )
+        return out
 
     async def query(
         self,
@@ -192,7 +239,9 @@ def _in_memory_metadata_matches(meta: dict, f: VectorMetadataFilter) -> bool:
         if not sec.startswith(f.sub_section):
             return False
     if f.book is not None and str(f.book).strip():
+        needle = f.book.lower()
         title = str(meta.get("title") or "").lower()
-        if f.book.lower() not in title:
+        src = str(meta.get("source_key") or "").lower()
+        if needle not in title and needle not in src:
             return False
     return True

@@ -7,12 +7,21 @@ import pytest
 from app.models.generate import (
     AudienceLevel,
     ContentType,
+    LessonOutlineGeneratedBody,
+    LessonOutlineRegenerateRequest,
     LessonOutlineRequest,
 )
 from app.models.generate import CITATION_SNIPPET_MAX_LEN, Citation
 
-from app.core.rag.generator import Generator, citations_from_chunks
-from app.core.rag.prompts.template_strategy import TemplatedLessonOutlineStrategy
+from app.core.rag.generator import (
+    Generator,
+    citations_from_chunks,
+    parse_lesson_outline_llm_json,
+)
+from app.core.rag.prompts.template_strategy import (
+    TemplatedLessonOutlineRefinementStrategy,
+    TemplatedLessonOutlineStrategy,
+)
 from app.core.rag.prompts.registry import (
     get_lesson_outline_strategy,
     get_lesson_outline_strategy_by_template_id,
@@ -33,6 +42,73 @@ def _outline_request(
         count=45,
         audienceLevel=AudienceLevel.INTERMEDIATE,
     )
+
+
+def _regenerate_request(
+    *,
+    previous_slide_outline: str | None = None,
+) -> LessonOutlineRegenerateRequest:
+    return LessonOutlineRegenerateRequest(
+        previous_outline=LessonOutlineGeneratedBody(
+            outline="Prior outline section I–III.",
+            slide_outline=previous_slide_outline,
+        ),
+        refinement_instructions="Expand the introduction.",
+    )
+
+
+@pytest.mark.asyncio
+async def test_regenerate_uses_refinement_prompt_and_citations_from_chunks() -> None:
+    llm = FakeLLMProvider()
+    gen = Generator(llm, TemplatedLessonOutlineStrategy())
+    refine = TemplatedLessonOutlineRefinementStrategy()
+    chunks = [
+        RetrievedChunk(
+            content="Osteons form compact bone.",
+            metadata={
+                "title": "Anatomy",
+                "page_number": 142,
+                "chapter": "6",
+                "section": "6.3",
+                "source_key": "ap.pdf",
+            },
+        )
+    ]
+    resp = await gen.regenerate(chunks, _regenerate_request(), refine)
+
+    assert resp.outline.startswith("I. Intro")
+    assert len(resp.citations) == 1
+    assert len(llm.calls) == 1
+    messages = llm.calls[0]
+    system = messages[0]["content"]
+    assert "refining" in system.lower() and "existing lesson outline" in system.lower()
+    assert "Surgical field edits" in system
+    assert "Lesson scope" not in system
+    assert "Prior outline section" in system
+    assert "Expand the introduction" in system
+    assert messages[1]["role"] == "user"
+    assert "refinement" in messages[1]["content"].lower()
+
+
+@pytest.mark.asyncio
+async def test_regenerate_resolves_ppt_when_previous_has_slide_outline() -> None:
+    payload = {
+        "outline": "X",
+        "keyConcepts": [],
+        "misconceptions": [],
+        "checksForUnderstanding": [],
+        "activityIdeas": [],
+        "slideOutline": "Slide 1: Title",
+    }
+    llm = FakeLLMProvider(json.dumps(payload))
+    gen = Generator(llm, TemplatedLessonOutlineStrategy())
+    refine = TemplatedLessonOutlineRefinementStrategy()
+    resp = await gen.regenerate(
+        [],
+        _regenerate_request(previous_slide_outline="Slide 1: Old"),
+        refine,
+    )
+    assert resp.slide_outline == "Slide 1: Title"
 
 
 @pytest.mark.asyncio
@@ -56,6 +132,7 @@ async def test_generator_calls_llm_and_builds_citations_from_chunks() -> None:
     assert resp.outline.startswith("I. Intro")
     assert resp.key_concepts == ["Concept A", "Concept B"]
     assert len(resp.citations) == 1
+    assert resp.citations[0].chunk_id == "ap.pdf_0"
     assert resp.citations[0].title == "Anatomy"
     assert resp.citations[0].page == "142"
     assert resp.citations[0].chapter == "6"
@@ -110,6 +187,9 @@ def test_citations_from_chunks_one_per_chunk_preserves_order_and_snippets() -> N
     ]
     cites = citations_from_chunks(chunks)
     assert len(cites) == 3
+    assert cites[0].chunk_id == "_0"
+    assert cites[1].chunk_id == "_1"
+    assert cites[2].chunk_id == "only.pdf_2"
     assert cites[0].snippet == "a" and cites[1].snippet == "b"
     assert cites[1].title == "T" and cites[1].page == "1"
     assert cites[2].title == "only.pdf"
@@ -120,7 +200,7 @@ def test_citations_from_chunks_one_per_chunk_preserves_order_and_snippets() -> N
 
 def test_citation_snippet_normalizes_pdf_noise_then_caps() -> None:
     raw = "PREDICTIONS\nOF\nSUPPL\x02\x03Y\nAND\nDEMAND\n" + "x" * 80
-    c = Citation(title="t", chapter="1", snippet=raw)
+    c = Citation(chunk_id="t0", title="t", chapter="1", snippet=raw)
     assert len(c.snippet) == CITATION_SNIPPET_MAX_LEN
     assert c.snippet.startswith("PREDICTIONS OF SUPPLY")
 
@@ -203,3 +283,23 @@ def test_get_lesson_outline_strategy_by_template_id_lecture_scaffold() -> None:
 def test_get_lesson_outline_strategy_by_template_id_unknown_raises() -> None:
     with pytest.raises(ValueError, match="Unknown lesson outline template"):
         get_lesson_outline_strategy_by_template_id("lecture_scaffold_one_shot")
+
+
+def test_parse_lesson_outline_llm_json_repairs_blockquote_dialogue_quotes() -> None:
+    """LLMs often emit ``> "Word`` inside JSON strings without escaping the quote."""
+    raw = (
+        '{"outline": "## Plan\\n\\n> '
+        + '"'
+        + 'Imagine <grounded ref=\\"0\\">x</grounded>", '
+        '"keyConcepts": [], "misconceptions": [], '
+        '"checksForUnderstanding": [], "activityIdeas": [], "slideOutline": null}'
+    )
+    body = parse_lesson_outline_llm_json(raw)
+    assert "\n> \"Imagine" in body.outline
+    assert '<grounded ref="0">x</grounded>' in body.outline
+
+
+def test_parse_lesson_outline_llm_json_still_raises_when_unrepairable() -> None:
+    raw = '{"outline": "not closed'
+    with pytest.raises(ValueError, match="not valid JSON"):
+        parse_lesson_outline_llm_json(raw)

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MH GenAI Engine API
-  version: 0.4.0
+  version: 0.6.1
   description: |
     Versioned API for the MH GenAI Engine. Provides OER-grounded RAG,
     template-driven generation, guardrails, and telemetry.
@@ -58,6 +58,61 @@ paths:
                 $ref: "#/components/schemas/Error"
         "502":
           description: Bad gateway — lesson outline generation failed (e.g. LLM returned invalid JSON)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /generate/lesson-outline/regenerate:
+    post:
+      summary: Refine a previously generated lesson outline
+      description: |
+        **Required:** ``previousOutline`` and ``refinementInstructions``. **Optional** ``chunkIds``: echo
+        ``chunkId`` values from a prior ``LessonOutlineResponse`` to load the **same** vector rows (no embed/search)
+        for deterministic context. If ``chunkIds`` is omitted or empty, the Engine embeds
+        ``refinementInstructions`` plus a slice of the prior ``outline`` and retrieves with **no** metadata filters.
+        Unknown or stale ``chunkIds`` yield **422**. Format rules (lecture vs ppt) follow ``previousOutline.slideOutline``
+        (non-empty string → ``ppt``). Invalid LLM JSON may yield **502**.
+      operationId: regenerateLessonOutline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LessonOutlineRegenerateRequest"
+      responses:
+        "200":
+          description: Successful refinement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonOutlineResponse"
+        "400":
+          description: Bad request (e.g. validation failed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized (auth TBD)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Unknown or stale ``chunkIds`` (or validation error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: Bad gateway — lesson outline regeneration failed (e.g. LLM returned invalid JSON)
           content:
             application/json:
               schema:
@@ -153,7 +208,10 @@ components:
       properties:
         book:
           type: string
-          description: Book identifier (pre-selected for POC; only one book available)
+          description: |
+            Optional retrieval filter: case-insensitive substring match on chunk
+            ``metadata.title`` **or** ``metadata.source_key`` (e.g. ``eepsam`` matches
+            ``eepsam.pdf`` when the PDF has no embedded title).
         chapter:
           type: string
           nullable: true
@@ -205,6 +263,54 @@ components:
         - contentType
         - count
         - audienceLevel
+
+    LessonOutlineGeneratedBody:
+      type: object
+      description: |
+        LLM-produced lesson fields (no ``citations``). Used as ``previousOutline`` on regenerate and matches
+        the JSON shape returned inside ``LessonOutlineResponse`` aside from citations.
+      properties:
+        outline:
+          type: string
+        keyConcepts:
+          type: array
+          items: { type: string }
+        misconceptions:
+          type: array
+          items: { type: string }
+        checksForUnderstanding:
+          type: array
+          items: { type: string }
+        activityIdeas:
+          type: array
+          items: { type: string }
+        slideOutline:
+          type: string
+          nullable: true
+          description: Omit or null for ``lecture_notes``; string when mirroring a prior ``ppt`` response.
+      required:
+        - outline
+
+    LessonOutlineRegenerateRequest:
+      type: object
+      description: |
+        Minimal edit payload. Scope or template changes belong on ``POST /generate/lesson-outline``.
+        Optional ``chunkIds`` selects deterministic chunks; omit for embedding retrieval (see endpoint description).
+      properties:
+        previousOutline:
+          $ref: "#/components/schemas/LessonOutlineGeneratedBody"
+        refinementInstructions:
+          type: string
+          description: Free-text edits or instructions applied to ``previousOutline``
+        chunkIds:
+          type: array
+          items: { type: string }
+          description: |
+            Optional. Values from ``citations[].chunkId`` of a prior response, in desired passage order.
+            Empty array is treated like omitted (fallback retrieval).
+      required:
+        - previousOutline
+        - refinementInstructions
 
     LessonOutlineResponse:
       type: object
@@ -284,6 +390,11 @@ components:
     Citation:
       type: object
       properties:
+        chunkId:
+          type: string
+          description: |
+            Vector store primary key for this chunk (``source_key`` + ``_`` + ``chunk_id`` from ingestion metadata).
+            Echo in ``chunkIds`` on regenerate for deterministic context.
         title:
           type: string
           description: Title of the cited source (e.g. book title)
@@ -303,6 +414,7 @@ components:
             Preview of the retrieved passage (capped at 50). Whitespace is collapsed and ASCII control
             characters removed to reduce PDF-extract noise. Same index as ``<grounded ref="i">``.
       required:
+        - chunkId
         - title
         - chapter
         - snippet

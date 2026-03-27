@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -9,7 +10,7 @@ from typing import TYPE_CHECKING
 from app.core.rag.retriever import RetrievedChunk
 
 if TYPE_CHECKING:
-    from app.models.generate import LessonOutlineRequest
+    from app.models.generate import LessonOutlineRegenerateRequest, LessonOutlineRequest
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 _RULES_DIR = Path(__file__).resolve().parent / "rules"
@@ -42,9 +43,23 @@ def load_lesson_outline_template(filename: str) -> str:
     return (_TEMPLATES_DIR / filename).read_text(encoding="utf-8")
 
 
+@lru_cache(maxsize=1)
 def _load_default_template() -> str:
     """Template used when ``TemplatedLessonOutlineStrategy()`` is called with no ``template`` argument."""
     return load_lesson_outline_template("default_lesson_outline.md")
+
+
+@lru_cache(maxsize=1)
+def _load_refinement_template() -> str:
+    return load_lesson_outline_template("refine_lesson_outline.md")
+
+
+def _expand_placeholders(template: str, parts: dict[str, str]) -> str:
+    """Substitute ``{key}`` without ``str.format`` (safe when values contain ``{`` / ``}``, e.g. JSON)."""
+    out = template
+    for key in sorted(parts.keys(), key=len, reverse=True):
+        out = out.replace("{" + key + "}", parts[key])
+    return out
 
 
 def _format_retrieved_context(chunks: list[RetrievedChunk]) -> str:
@@ -109,6 +124,50 @@ class TemplatedLessonOutlineStrategy:
                 "role": "user",
                 "content": (
                     "Produce the JSON object now for the lesson outline "
+                    "per the system instructions."
+                ),
+            },
+        ]
+
+
+class TemplatedLessonOutlineRefinementStrategy:
+    """System prompt for **editing** a prior outline; same format rules + fresh retrieval context."""
+
+    def __init__(self, template: str | None = None) -> None:
+        self._template = template if template is not None else _load_refinement_template()
+
+    def build_messages(
+        self,
+        request: LessonOutlineRegenerateRequest,
+        chunks: list[RetrievedChunk],
+    ) -> list[dict[str, str]]:
+        retrieved_context = _format_retrieved_context(chunks)
+        previous_json = json.dumps(
+            request.previous_outline.model_dump(mode="json", by_alias=True),
+            ensure_ascii=False,
+            indent=2,
+        )
+        task_body = _expand_placeholders(
+            self._template,
+            {
+                "retrieved_context": retrieved_context,
+                "previous_outline_json": previous_json,
+                "refinement_instructions": request.refinement_instructions,
+            },
+        )
+        ct = request.resolved_content_type().value
+        system_content = "\n\n---\n\n".join(
+            (
+                load_format_rules_for_content_type(ct),
+                task_body,
+            )
+        )
+        return [
+            {"role": "system", "content": system_content},
+            {
+                "role": "user",
+                "content": (
+                    "Apply the refinement instructions and return the updated JSON object "
                     "per the system instructions."
                 ),
             },

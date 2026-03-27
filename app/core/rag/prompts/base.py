@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Protocol
 from app.core.rag.retriever import RetrievedChunk
 
 if TYPE_CHECKING:
-    from app.models.generate import LessonOutlineRequest
+    from app.models.generate import LessonOutlineRegenerateRequest, LessonOutlineRequest
 
 
 class LessonOutlinePromptStrategy(Protocol):
@@ -34,4 +34,16 @@ class LessonOutlinePromptStrategy(Protocol):
 
         Same provider-agnostic contract: ``role`` and ``content`` strings per turn.
         """
+        ...
+
+
+class LessonOutlineRefinementPromptStrategy(Protocol):
+    """Build chat messages for lesson-outline **regeneration** (edit prior outline)."""
+
+    def build_messages(
+        self,
+        request: LessonOutlineRegenerateRequest,
+        chunks: list[RetrievedChunk],
+    ) -> list[dict[str, str]]:
+        """Same contract as :class:`LessonOutlinePromptStrategy`; input includes prior outline + edits."""
         ...

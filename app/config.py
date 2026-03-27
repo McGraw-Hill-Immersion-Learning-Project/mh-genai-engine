@@ -11,6 +11,8 @@ class Settings(BaseSettings):
 
     # App
     app_env: str = "development"
+    # Per-request wall-clock limit for the full handler (RAG + LLM). 0 = disabled.
+    request_timeout_seconds: float = 120.0
 
     # Provider selection
     llm_provider: str = "anthropic"

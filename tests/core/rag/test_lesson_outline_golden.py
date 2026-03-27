@@ -81,6 +81,7 @@ async def test_golden_prompt_produces_structured_answer_with_citations(
     assert resp.misconceptions is not None and len(resp.misconceptions) >= 1
     assert len(resp.citations) >= 1
     cite = resp.citations[0]
+    assert cite.chunk_id == "golden.pdf_g0"
     assert cite.title == "Golden OER — Skeletal System"
     assert cite.chapter == "6"
     assert cite.section == "6.2"

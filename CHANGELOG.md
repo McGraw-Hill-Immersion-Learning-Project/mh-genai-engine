@@ -12,6 +12,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- **`RequestTimeoutMiddleware`:** per-request wall-clock limit for all HTTP routes (`REQUEST_TIMEOUT_SECONDS`, default 120; `0` disables). Returns **504** when exceeded. See `app/middleware/timeout.py`, `docs/runbook.md`, `docs/local-dev.md` §7.
+
+### Changed
+
+- **`book` retrieval filter:** case-insensitive substring match on chunk **`metadata.title`** **or** **`metadata.source_key`** (pgvector + in-memory test store). Fixes empty PDF document titles (e.g. OER) where scoping by ingest filename is needed. Docs: `docs/ingestion-plan.md`, `docs/runbook.md`, `docs/api/CHANGELOG_API.md` **v0.6.1**, `docs/api/openapi.yaml`.
+
 - **`app/deps.py`:** FastAPI dependencies for `get_settings`, `get_retriever`, `get_llm` (used by generate routes).
 - **Startup (pgvector):** `app/main.py` lifespan calls `ensure_collection` / `ensure_index` when `VECTOR_DB_PROVIDER=pgvector` so the first request or ingest is less likely to hit missing-relation errors.
 - **`LOG_LEVEL`:** optional env (see `.env.example`); `DEBUG` enables verbose `app.*` logs (e.g. full RAG prompt traces).

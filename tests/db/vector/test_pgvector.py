@@ -80,6 +80,26 @@ async def test_add_documents_and_query(
 
 
 @pytest.mark.asyncio
+async def test_get_by_ids_preserves_order_and_omits_missing(
+    pgvector_store: PgvectorStore,
+) -> None:
+    await pgvector_store.ensure_collection()
+    docs = ["A", "B"]
+    embeddings = [[0.0] * 8, [0.0] * 8]
+    metadatas = [
+        {"source_key": "g.pdf", "chunk_id": 0},
+        {"source_key": "g.pdf", "chunk_id": 1},
+    ]
+    await pgvector_store.add_documents(docs, embeddings, metadatas)
+    rows = await pgvector_store.get_by_ids(["g.pdf_1", "g.pdf_0"])
+    assert [r["id"] for r in rows] == ["g.pdf_1", "g.pdf_0"]
+    assert rows[0]["content"] == "B"
+    partial = await pgvector_store.get_by_ids(["g.pdf_0", "missing"])
+    assert len(partial) == 1
+    assert partial[0]["id"] == "g.pdf_0"
+
+
+@pytest.mark.asyncio
 async def test_query_with_metadata_filter_chapter(
     pgvector_store: PgvectorStore,
 ) -> None:
@@ -139,6 +159,28 @@ async def test_query_metadata_filter_book_substring_in_title(
     )
     assert len(results) == 1
     assert results[0]["content"] == "A"
+
+
+@pytest.mark.asyncio
+async def test_query_metadata_filter_book_matches_source_key_when_title_empty(
+    pgvector_store: PgvectorStore,
+) -> None:
+    """OER PDFs often have empty embedded title; book should still scope by ingest key."""
+    await pgvector_store.ensure_collection()
+    docs = ["Apple market chunk", "Other PDF chunk"]
+    embeddings = [[1.0] * 8, [1.0] * 8]
+    metadatas = [
+        {"source_key": "eepsam.pdf", "chunk_id": 0, "chapter": "1", "title": ""},
+        {"source_key": "other.pdf", "chunk_id": 0, "chapter": "1", "title": ""},
+    ]
+    await pgvector_store.add_documents(docs, embeddings, metadatas)
+    results = await pgvector_store.query(
+        [1.0] * 8,
+        n_results=10,
+        metadata_filter=VectorMetadataFilter(chapter="1", book="eepsam"),
+    )
+    assert len(results) == 1
+    assert results[0]["content"] == "Apple market chunk"
 
 
 @pytest.mark.asyncio

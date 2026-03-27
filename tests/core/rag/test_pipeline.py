@@ -52,6 +52,7 @@ async def test_pipeline_end_to_end_with_mocks() -> None:
     assert "Intro" in resp.outline or "osteon" in resp.outline.lower()
     assert len(resp.citations) >= 1
     assert resp.citations[0].chapter == "4"
+    assert resp.citations[0].chunk_id == "bio.pdf_0"
     assert resp.citations[0].title == "Biology"
 
 

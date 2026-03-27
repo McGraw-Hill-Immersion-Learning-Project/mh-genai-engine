@@ -6,21 +6,26 @@ import warnings
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from pydantic.warnings import UnsupportedFieldAttributeWarning
 
 from app.api import health
 from app.api import generate
 from app.api import templates
 from app.deps import get_settings
+from app.middleware.timeout import RequestTimeoutMiddleware
 from app.providers import get_vector_store
 from app.utils import get_logger
 
 logger = get_logger(__name__)
 
-# Pydantic 2.12 + FastAPI request-body validation can emit spurious
+# Pydantic 2.12+ + FastAPI request-body validation can emit spurious
 # ``UnsupportedFieldAttributeWarning`` for ``alias_generator`` on models with
 # optional fields; validation and aliases still behave correctly.
-warnings.filterwarnings("ignore", category=UnsupportedFieldAttributeWarning)
+try:
+    from pydantic.warnings import UnsupportedFieldAttributeWarning as _UnsupportedFieldAttrWarning
+except ImportError:  # pragma: no cover — older Pydantic
+    pass
+else:
+    warnings.filterwarnings("ignore", category=_UnsupportedFieldAttrWarning)
 
 
 def _configure_logging() -> None:
@@ -64,10 +69,15 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI app."""
+    settings = get_settings()
     app = FastAPI(
         title="MH GenAI Engine",
         description="RAG-powered backend",
         lifespan=lifespan,
+    )
+    app.add_middleware(
+        RequestTimeoutMiddleware,
+        timeout_seconds=settings.request_timeout_seconds,
     )
     app.include_router(health.router)
     app.include_router(templates.router)

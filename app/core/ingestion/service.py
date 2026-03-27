@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from app.core.ingestion.chunker import Chunk, TextChunker
@@ -31,6 +32,7 @@ class IngestionService:
         batch_size: int = 64,
         batch_delay_seconds: float = 0,
         max_chunks: int = 0,
+        progress: Callable[[str], None] | None = None,
     ) -> None:
         self._storage = storage
         self._parser = parser
@@ -40,45 +42,73 @@ class IngestionService:
         self._batch_size = batch_size
         self._batch_delay_seconds = batch_delay_seconds
         self._max_chunks = max_chunks
+        self._progress = progress
+
+    def _ingest_log(self, msg: str, *args: object) -> None:
+        line = msg % args if args else msg
+        logger.info(line)
+        if self._progress is not None:
+            self._progress(line)
 
     async def ingest(self, key: str) -> int:
         """Ingest a document by key. Returns the number of chunks stored.
 
         Idempotent: re-running with the same key replaces existing vectors.
         """
-        logger.info("[ingest] Step 1: reading %r from storage...", key)
+        self._ingest_log("[ingest] Step 1: reading %r from storage...", key)
         # 1. Read file bytes from storage
         data = await self._storage.get(key)
-        logger.info("[ingest] Step 1 complete: bytes loaded.")
+        self._ingest_log("[ingest] Step 1 complete: %d bytes loaded.", len(data))
 
         # 2. Parse into ParsedDocument
-        logger.info("[ingest] Step 2: parsing document...")
+        if key.lower().endswith(".pdf"):
+            try:
+                import pypdfium2 as pdfium
+
+                probe = pdfium.PdfDocument(data)
+                n_pages = len(probe)
+                probe.close()
+                self._ingest_log(
+                    "[ingest] Step 2: parsing %d-page PDF with Docling "
+                    "(library has no per-page progress; CPU may stay busy)...",
+                    n_pages,
+                )
+            except Exception:
+                self._ingest_log(
+                    "[ingest] Step 2: parsing PDF with Docling "
+                    "(library has no per-page progress)..."
+                )
+        else:
+            self._ingest_log("[ingest] Step 2: parsing document...")
         doc = self._parser.parse(key, data)
-        logger.info(
+        self._ingest_log(
             "[ingest] Step 2 complete: parsed document with %d pages.",
             len(doc.pages),
         )
 
         # 3. Chunk into list[Chunk]
-        logger.info("[ingest] Step 3: chunking document...")
+        self._ingest_log("[ingest] Step 3: chunking document...")
         chunks = self._chunker.chunk(doc, key)
         if not chunks:
-            logger.info("[ingest] No chunks produced; nothing to store.")
+            self._ingest_log("[ingest] No chunks produced; nothing to store.")
             return 0
         if self._max_chunks and len(chunks) > self._max_chunks:
-            logger.info(
+            self._ingest_log(
                 "[ingest] Step 3 note: capping chunks to %d (from %d).",
                 self._max_chunks,
                 len(chunks),
             )
             chunks = chunks[: self._max_chunks]
-        logger.info(
+        self._ingest_log(
             "[ingest] Step 3 complete: produced %d chunks.", len(chunks)
         )
 
         # 4. Batch embed: collect all embeddings in memory before storing
-        logger.info(
-            "[ingest] Step 4: embedding chunks (batch_size=%d)...",
+        n_batches = (len(chunks) + self._batch_size - 1) // self._batch_size
+        self._ingest_log(
+            "[ingest] Step 4: embedding %d chunks in %d batch(es) (batch_size=%d)...",
+            len(chunks),
+            n_batches,
             self._batch_size,
         )
         all_embeddings: list[list[float]] = []
@@ -89,28 +119,31 @@ class IngestionService:
             texts = [c.text for c in batch]
             batch_embeddings = await self._embedder.embed(texts)
             all_embeddings.extend(batch_embeddings)
-            logger.info(
-                "[ingest]   embedded batch %d (%d chunks).",
+            self._ingest_log(
+                "[ingest]   embedded batch %d/%d (%d chunks).",
                 i // self._batch_size + 1,
+                n_batches,
                 len(batch),
             )
-        logger.info(
+        self._ingest_log(
             "[ingest] Step 4 complete: embedded %d chunks.",
             len(all_embeddings),
         )
 
         # 5. Ensure table exists (important for new embedding config tables)
-        logger.info("[ingest] Step 5: ensuring collection...")
+        self._ingest_log("[ingest] Step 5: ensuring collection...")
         await self._vector_store.ensure_collection()
-        logger.info("[ingest] Step 5 complete: collection ensured.")
+        self._ingest_log("[ingest] Step 5 complete: collection ensured.")
 
         # 6. Delete existing vectors for this source_key (idempotency)
-        logger.info("[ingest] Step 6: deleting existing vectors for this source...")
+        self._ingest_log(
+            "[ingest] Step 6: deleting existing vectors for this source..."
+        )
         await self._vector_store.delete_by_source_key(key)
-        logger.info("[ingest] Step 6 complete.")
+        self._ingest_log("[ingest] Step 6 complete.")
 
         # 7. Bulk add
-        logger.info("[ingest] Step 7: adding documents...")
+        self._ingest_log("[ingest] Step 7: adding %d documents...", len(chunks))
         documents = [c.text for c in chunks]
         metadatas = [c.to_metadata() for c in chunks]
         await self._vector_store.add_documents(
@@ -118,11 +151,11 @@ class IngestionService:
             embeddings=all_embeddings,
             metadatas=metadatas,
         )
-        logger.info("[ingest] Step 7 complete: documents added.")
+        self._ingest_log("[ingest] Step 7 complete: documents added.")
 
         # 8. Ensure HNSW index exists
-        logger.info("[ingest] Step 8: ensuring HNSW index...")
+        self._ingest_log("[ingest] Step 8: ensuring HNSW index...")
         await self._vector_store.ensure_index()
-        logger.info("[ingest] Step 8 complete: index ensured.")
+        self._ingest_log("[ingest] Step 8 complete: index ensured.")
 
         return len(chunks)

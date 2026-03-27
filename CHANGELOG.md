@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- **Ingestion (Docling / CLI):** env-driven PDF pipeline tuning — `DO_OCR`, `DO_TABLE_STRUCTURE`, `DOCLING_OCR_BATCH_SIZE`, `DOCLING_LAYOUT_BATCH_SIZE`, `DOCLING_TABLE_BATCH_SIZE`, `DOCLING_QUEUE_MAX_SIZE` (see `.env.example`). `DocumentParser` builds `ThreadedPdfPipelineOptions` from `Settings` to cap inter-stage buffering and batch sizes, reducing peak RAM on large PDFs. `IngestionService` accepts optional `progress` callback; `scripts/ingest.py` echoes pipeline steps to stderr, optional `--quiet`, `--verbose`, `--library-logs`, and quiets Docling/RapidOCR INFO logs by default.
+
 - **`RequestTimeoutMiddleware`:** per-request wall-clock limit for all HTTP routes (`REQUEST_TIMEOUT_SECONDS`, default 120; `0` disables). Returns **504** when exceeded. See `app/middleware/timeout.py`, `docs/runbook.md`, `docs/local-dev.md` §7.
 
 ### Changed

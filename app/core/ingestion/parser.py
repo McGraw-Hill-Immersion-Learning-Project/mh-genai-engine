@@ -6,9 +6,10 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 
 import pypdfium2 as pdfium  # used only to read embedded PDF title metadata; Docling does not surface it
-from docling.document_converter import DocumentConverter
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import ThreadedPdfPipelineOptions
+from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.types.doc import DocItemLabel, SectionHeaderItem, TableItem, TextItem
-
 
 @dataclass
 class PageText:
@@ -39,8 +40,31 @@ class ParsedDocument:
 class DocumentParser:
     """Parse raw document bytes into structured per-page text."""
 
-    def __init__(self) -> None:
-        self._converter = DocumentConverter()
+    def __init__(
+        self,
+        *,
+        do_ocr: bool = True,
+        do_table_structure: bool = True,
+        ocr_batch_size: int = 4,
+        layout_batch_size: int = 4,
+        table_batch_size: int = 4,
+        queue_max_size: int = 16,
+    ) -> None:
+        pdf_pipeline = ThreadedPdfPipelineOptions(
+            do_ocr=do_ocr,
+            do_table_structure=do_table_structure,
+            ocr_batch_size=ocr_batch_size,
+            layout_batch_size=layout_batch_size,
+            table_batch_size=table_batch_size,
+            queue_max_size=queue_max_size,
+        )
+        self._converter = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(
+                    pipeline_options=pdf_pipeline,
+                ),
+            },
+        )
 
     def parse(self, key: str, data: bytes) -> ParsedDocument:
         """Parse document bytes. Routes by file extension."""

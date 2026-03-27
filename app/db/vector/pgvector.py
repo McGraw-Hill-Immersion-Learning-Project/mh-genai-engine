@@ -7,6 +7,7 @@ import asyncpg
 
 from app.db.vector.base import VectorStore
 from app.db.vector.filters import VectorMetadataFilter
+from app.db.vector.ids import chunk_document_id
 from app.utils import make_pgvector_index_name
 
 
@@ -28,6 +29,14 @@ def _validate_table_name(name: str) -> None:
         raise ValueError(
             f"Invalid table name {name!r}. Use alphanumeric and underscores only."
         )
+
+
+def _normalize_metadata(raw: str | dict | None) -> dict:
+    if raw is None:
+        return {}
+    if isinstance(raw, str):
+        return json.loads(raw) if raw else {}
+    return raw if isinstance(raw, dict) else {}
 
 
 class PgvectorStore:
@@ -95,10 +104,7 @@ class PgvectorStore:
 
         ids: list[str] = []
         for i, meta in enumerate(metadatas):
-            source_key = meta.get("source_key", "")
-            chunk_id = meta.get("chunk_id", i)
-            doc_id = f"{source_key}_{chunk_id}"
-            ids.append(doc_id)
+            ids.append(chunk_document_id(meta, i))
 
         conn = await asyncpg.connect(self._database_url)
         try:
@@ -127,6 +133,39 @@ class PgvectorStore:
             await conn.close()
 
         return ids
+
+    async def get_by_ids(self, ids: list[str]) -> list[dict]:
+        """Return rows in the order of *ids*; skip ids not found."""
+        if not ids:
+            return []
+
+        conn = await asyncpg.connect(self._database_url)
+        try:
+            rows = await conn.fetch(
+                f"""
+                SELECT id, content, metadata
+                FROM {self._table_name}
+                WHERE id = ANY($1::text[])
+                """,
+                ids,
+            )
+        finally:
+            await conn.close()
+
+        by_id = {row["id"]: row for row in rows}
+        ordered: list[dict] = []
+        for doc_id in ids:
+            row = by_id.get(doc_id)
+            if row is None:
+                continue
+            ordered.append(
+                {
+                    "id": row["id"],
+                    "content": row["content"],
+                    "metadata": _normalize_metadata(row["metadata"]),
+                }
+            )
+        return ordered
 
     async def query(
         self,
@@ -169,7 +208,8 @@ class PgvectorStore:
                     metadata_filter.book
                 ).strip():
                     where_parts.append(
-                        f"POSITION(LOWER(${i}) IN LOWER(COALESCE(metadata->>'title', ''))) > 0"
+                        f"(POSITION(LOWER(${i}) IN LOWER(COALESCE(metadata->>'title', ''))) > 0 "
+                        f"OR POSITION(LOWER(${i}) IN LOWER(COALESCE(metadata->>'source_key', ''))) > 0)"
                     )
                     bind_args.append(metadata_filter.book)
                     i += 1
@@ -186,13 +226,6 @@ class PgvectorStore:
             rows = await conn.fetch(sql, *bind_args)
         finally:
             await conn.close()
-
-        def _normalize_metadata(raw: str | dict | None) -> dict:
-            if raw is None:
-                return {}
-            if isinstance(raw, str):
-                return json.loads(raw) if raw else {}
-            return raw if isinstance(raw, dict) else {}
 
         return [
             {

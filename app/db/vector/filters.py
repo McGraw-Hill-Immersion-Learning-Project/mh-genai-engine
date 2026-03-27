@@ -12,7 +12,9 @@ class VectorMetadataFilter:
     - *chapter*, *section*: exact match on ``metadata->>'chapter'`` / ``section``.
     - *sub_section*: stored ``section`` must start with this string (prefix), e.g.
       TOC section label ``6.3.1 Intro`` matches ``sub_section="6.3.1"``.
-    - *book*: substring match, case-insensitive, against ``metadata->>'title'``.
+    - *book*: substring match, case-insensitive, against ``metadata->>'title'``
+      **or** ``metadata->>'source_key'`` (so ingestion keys like ``eepsam.pdf`` work when
+      PDF title metadata is empty).
     """
 
     chapter: str | None = None

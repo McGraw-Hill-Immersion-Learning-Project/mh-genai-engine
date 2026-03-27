@@ -17,6 +17,13 @@ class VectorStore(Protocol):
         """Add documents with embeddings. Return list of document IDs."""
         ...
 
+    async def get_by_ids(self, ids: list[str]) -> list[dict]:
+        """Fetch rows by primary key. Each dict has ``id``, ``content``, ``metadata`` (no ``distance``).
+
+        Implementations should return rows in the same order as *ids* (omit missing ids).
+        """
+        ...
+
     async def query(
         self,
         embedding: list[float],

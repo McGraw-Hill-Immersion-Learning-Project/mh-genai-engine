@@ -30,18 +30,23 @@ def test_extracts_title(sample_pdf_bytes):
     assert doc.title == "Sample Economics Textbook"
 
 
-def test_extracts_toc_entries(sample_pdf_bytes):
+def test_toc_entries_are_typed(sample_pdf_bytes):
+    doc = DocumentParser().parse("test.pdf", sample_pdf_bytes)
+    assert isinstance(doc.toc, list)
+    assert all(isinstance(e, TocEntry) for e in doc.toc)
+
+
+def test_toc_uses_embedded_bookmarks_when_present(sample_pdf_bytes):
+    # sample_pdf_bytes has embedded bookmarks: 1 chapter (level 1) + 2 sections (level 2)
     doc = DocumentParser().parse("test.pdf", sample_pdf_bytes)
     assert len(doc.toc) == 3
-    assert all(isinstance(e, TocEntry) for e in doc.toc)
-    levels = [e.level for e in doc.toc]
-    headings = [e.title for e in doc.toc]
-    assert levels == [1, 2, 2]
-    assert "Chapter 1: Supply and Demand" in headings
-    assert "1.1 What is Economics?" in headings
+    assert doc.toc[0] == TocEntry(level=1, title="Chapter 1: Supply and Demand", page=1)
+    assert doc.toc[1] == TocEntry(level=2, title="1.1 What is Economics?", page=2)
+    assert doc.toc[2] == TocEntry(level=2, title="1.2 Microeconomics and Macroeconomics", page=3)
 
 
 def test_no_toc_returns_empty_list(sample_pdf_no_toc_bytes):
+    # no bookmarks + no Docling-detectable visual headings → empty TOC
     doc = DocumentParser().parse("no_toc.pdf", sample_pdf_no_toc_bytes)
     assert doc.toc == []
     assert len(doc.pages) == 2

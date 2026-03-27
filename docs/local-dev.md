@@ -67,7 +67,22 @@ You should see:
 
 ---
 
-## 4. Ingesting a PDF with dev embeddings (no API keys)
+## 4. PDF parsing with Docling
+
+The ingestion pipeline uses **Docling** (standard pipeline) to convert PDFs to structured Markdown before chunking. Docling performs ML-based layout analysis to detect headings, tables, and lists.
+
+**First-run model download:** On the first `ingest` run, Docling automatically downloads its layout models (~500 MB) to `~/.cache/docling/`. Subsequent runs use the cached models. To pre-fetch offline:
+
+```bash
+.venv/bin/docling-tools models download
+```
+
+**Performance:** ~15–20s for a 32-page PDF on standard hardware (no OCR). Processing time scales linearly with page count.
+
+---
+
+## 5. Ingesting a PDF with dev embeddings (no API keys)
+
 
 For local plumbing tests and quick feedback, use the synthetic dev embedding provider. It is deterministic and fast, but not semantically meaningful.
 
@@ -105,7 +120,7 @@ All chunks and embeddings are written to a provider/model/dimension specific `ch
 
 ---
 
-## 5. Ingesting with Voyage (production‑like)
+## 6. Ingesting with Voyage (production‑like)
 
 When you want realistic embeddings, switch to the Voyage provider:
 
@@ -132,7 +147,7 @@ This path is slower and uses your Voyage quota, but produces real semantic embed
 
 ---
 
-## 6. Verifying what’s in the database
+## 7. Verifying what’s in the database
 
 To inspect stored chunks and embeddings, connect to the db container:
 

@@ -20,7 +20,7 @@
 
 **Chapter extracted:** Chapter 1 -- Welcome to Economics
 
-The full PDF is used for ingestion in Sprint 1. A single-chapter extract can be produced from the PDF using PyMuPDF if needed for isolated testing.
+The full PDF is used for ingestion in Sprint 1. A single-chapter extract can be produced from the PDF using PyMuPDF (still available as a dev dependency) if needed for isolated testing.
 
 ## 3. Chunking Strategy
 
@@ -32,7 +32,7 @@ Chunking uses `RecursiveCharacterTextSplitter` from `langchain-text-splitters`.
 | Overlap    | 50 characters                 | Preserves context across chunk boundaries so retrieval does not miss cross-boundary sentences.                  |
 | Separators | `\n\n`, `\n`, `. `, ` `, `""` | Tries to split on paragraph, then sentence, then word boundaries before hard-splitting.                         |
 
-**Per-page chunking:** Text is extracted page by page via PyMuPDF. Each page is chunked independently and every chunk is tagged with its source page number, preserving page provenance for citations.
+**Per-page chunking:** Text is extracted page by page via Docling. Each page is chunked independently and every chunk is tagged with its source page number (from Docling's `prov[0].page_no`), preserving page provenance for citations.
 
 **Known limitation:** Paragraphs spanning a page break are split at the boundary, which can produce incomplete chunks. The 50-character overlap partially mitigates this.
 
@@ -68,7 +68,7 @@ Each chunk stored in pgvector carries the following metadata:
 ```
 PDF / TXT file (storage)
         |
-   Document Parser       -- PyMuPDF; extracts per-page text, title, TOC
+   Document Parser       -- Docling (standard pipeline); extracts per-page Markdown text, title (via pypdfium2 metadata), TOC (from visual section headers)
         |
    Text Chunker          -- RecursiveCharacterTextSplitter (500 chars, 50 overlap)
         |

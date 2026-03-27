@@ -1,22 +1,21 @@
+from typing import Literal
+
 from fastapi import APIRouter
+
+from app.core.rag.prompts.registry import iter_template_catalog
 from app.schemas.template import Template, TemplateList
 
 router = APIRouter()
 
+TemplateWorkflowSlug = Literal["lesson-outline", "assessment-transform"]
 
-@router.get("/templates", response_model=TemplateList)
-def list_templates():
+
+@router.get("/templates/{workflow}", response_model=TemplateList)
+def list_templates(workflow: TemplateWorkflowSlug) -> TemplateList:
+    """List Engine-approved templates for one workflow (kebab-case template ``id`` values)."""
+    rows = iter_template_catalog(workflow)
     return TemplateList(
         templates=[
-            Template(
-                id="lesson-outline",
-                name="Lesson Outline",
-                description="Generate a lesson outline grounded in OER content",
-            ),
-            Template(
-                id="assessment-transform",
-                name="Assessment Transform",
-                description="Transform an MCQ into an open-ended question + rubric",
-            ),
+            Template(id=e.api_id, name=e.name, description=e.description) for e in rows
         ]
     )

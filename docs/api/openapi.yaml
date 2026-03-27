@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MH GenAI Engine API
-  version: 0.2.0
+  version: 0.4.0
   description: |
     Versioned API for the MH GenAI Engine. Provides OER-grounded RAG,
     template-driven generation, guardrails, and telemetry.
@@ -17,9 +17,13 @@ paths:
     post:
       summary: Generate a lesson outline grounded in OER content
       description: |
-        Contract and response shape for lesson-outline generation. **Current Engine behavior:**
-        the HTTP implementation may return **mock** data for integration testing until the route is
-        wired to the in-process RAG pipeline (`LessonOutlinePipeline`). See `docs/api/API_DEFERRED_AND_NOTES.md`.
+        Retrieves grounded passages from the vector store, then calls the configured LLM to produce
+        structured JSON (`outline`, `keyConcepts`, etc.). **Citations** are added by the Engine: one
+        object per retrieved chunk, same order as passages in the model context. Index ``i`` in
+        ``citations[i]`` matches ``### Passage [i]`` and valid ``<grounded ref="i">…</grounded>``
+        spans in string fields (including ``slideOutline`` when ``contentType`` is ``ppt``).
+        Requires ``DATABASE_URL``, embeddings, indexed content, and a configured LLM (e.g. Anthropic).
+        On LLM/parse failure the server may respond with **502**.
       operationId: generateLessonOutline
       requestBody:
         required: true
@@ -48,6 +52,12 @@ paths:
                 $ref: "#/components/schemas/Error"
         "500":
           description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: Bad gateway — lesson outline generation failed (e.g. LLM returned invalid JSON)
           content:
             application/json:
               schema:
@@ -93,22 +103,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /templates:
+  /templates/{workflow}:
     get:
-      summary: List available templates
+      summary: List templates for a workflow
       description: |
-        Returns the Engine's approved template set (e.g. lesson outline, assessment transform).
-        Provided by the Engine (Project A); Dashboard uses this to offer workflow options.
-      operationId: listTemplates
+        Returns Engine-approved **prompt template** ids for one workflow. Each item's ``id`` is a
+        stable kebab-case string: use ``lesson-outline`` ids as ``template`` on
+        ``POST /generate/lesson-outline``. Assessment-transform ids are reserved for Workflow 2 when
+        a template field is added there.
+      operationId: listTemplatesByWorkflow
+      parameters:
+        - name: workflow
+          in: path
+          required: true
+          description: Workflow slug
+          schema:
+            type: string
+            enum: [lesson-outline, assessment-transform]
       responses:
         "200":
-          description: Template list
+          description: Template list for the requested workflow
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/TemplateList"
         "401":
           description: Unauthorized (auth TBD)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Unknown workflow path value
           content:
             application/json:
               schema:
@@ -130,7 +156,12 @@ components:
           description: Book identifier (pre-selected for POC; only one book available)
         chapter:
           type: string
-          description: Chapter identifier (from content catalog / ingestion pipeline)
+          nullable: true
+          description: |
+            Chapter identifier from the content catalog when chunks have TOC-backed
+            metadata. Omit or set null when scoping by chapter does not apply (e.g. PDFs
+            with no table of contents). Empty string is also accepted and behaves like
+            no chapter filter at retrieval time.
         section:
           type: string
           description: Section identifier within the chapter (optional content scoping)
@@ -161,8 +192,15 @@ components:
             Logging-only flag. Set to true when the user is regenerating
             (re-requesting with updated parameters). Does not change
             generation behavior.
+        template:
+          type: string
+          default: default
+          enum: [default, lecture-scaffold-one-shot]
+          description: |
+            Prompt template variant (kebab-case). Must match an ``id`` from
+            ``GET /templates/lesson-outline``. The Engine maps this to the system prompt;
+            clients do not send prompt text.
       required:
-        - chapter
         - learningObjective
         - contentType
         - count
@@ -173,7 +211,9 @@ components:
       properties:
         outline:
           type: string
-          description: Main lesson or lecture outline text, aligned to objectives
+          description: |
+            Main lesson or lecture outline text, aligned to objectives. May include
+            ``<grounded ref="i">verbatim excerpt</grounded>`` for UI linking to ``citations[i]``.
         keyConcepts:
           type: array
           items: { type: string }
@@ -192,12 +232,16 @@ components:
           description: Suggested in-class activity ideas, time-boxed (optional)
         slideOutline:
           type: string
-          description: Slide-by-slide or speaker-note scaffolding (populated when contentType is ppt)
+          description: |
+            Slide-by-slide or speaker-note scaffolding when ``contentType`` is ``ppt``; use the same
+            ``<grounded ref="i">…</grounded>`` convention as ``outline`` (not ad-hoc ``[Ref i]`` markers).
         citations:
           type: array
           items:
             $ref: "#/components/schemas/Citation"
-          description: OER sources used to ground the outline
+          description: |
+            One entry per retrieved chunk, same order as passages in the model context.
+            Index ``i`` matches ``<grounded ref="i">``. ``snippet`` is a short preview (50 chars max).
 
     AssessmentTransformRequest:
       type: object
@@ -252,6 +296,16 @@ components:
         section:
           type: string
           description: Section within the chapter (if available)
+        snippet:
+          type: string
+          maxLength: 50
+          description: |
+            Preview of the retrieved passage (capped at 50). Whitespace is collapsed and ASCII control
+            characters removed to reduce PDF-extract noise. Same index as ``<grounded ref="i">``.
+      required:
+        - title
+        - chapter
+        - snippet
 
     Template:
       type: object
@@ -273,7 +327,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Template"
-          description: List of Engine-approved templates (workflow types) available to callers
+          description: |
+            Templates for the requested workflow only. Each ``id`` is kebab-case and stable for API use.
 
     LogEntry:
       type: object

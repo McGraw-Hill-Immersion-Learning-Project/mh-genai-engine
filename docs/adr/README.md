@@ -18,7 +18,7 @@ Where each ADR is reflected in the codebase:
 |-----|----------------|
 | **ADR-001** (LLM Provider) | `app/providers/llm/` — Protocol in `base.py` (provider-agnostic chat turns: `role` + `content`). **Anthropic:** `anthropic.py` uses `anthropic` SDK ≥ 0.80 (`AsyncAnthropic.messages.create`). **Gemini:** `gemini.py` still a stub. Embeddings: `app/providers/embeddings/` (`voyage`, `gemini`, `dev`). Factory in `app/providers/__init__.py` selects via `LLM_PROVIDER` / `EMBEDDING_PROVIDER`. Defaults: Anthropic + Voyage. |
 | **ADR-002** (Vector DB) | `app/db/vector/` — Protocol in `base.py`; **`pgvector.py`** implements storage, query, and optional **`metadata_filter`** (`VectorMetadataFilter` in `filters.py`). `chroma.py` is unused placeholder. Selected via `VECTOR_DB_PROVIDER`. |
-| **ADR-003** (RAG Framework) | **Custom pipeline (no LangChain):** `app/core/rag/` — `retriever.py`, `generator.py`, `pipeline.py`, `prompts/` (strategies + default `.md`). Ingestion remains `app/core/ingestion/`. |
+| **ADR-003** (RAG Framework) | **Custom pipeline (no LangChain):** `app/core/rag/` — `retriever.py`, `generator.py`, `pipeline.py`, `prompts/` (`template_strategy.py`, `registry.py`, `templates/*.md`, `rules/*.md` for lecture vs ppt format). Ingestion remains `app/core/ingestion/`. |
 | **ADR-004** (FastAPI) | `app/main.py`, `app/api/` — FastAPI app with health router. |
 | **ADR-005** (Docker Compose) | `Dockerfile`, `docker-compose.yml` — `docker compose up` runs the app locally. |
 | **ADR-006** (Key Management) | `app/config.py` (pydantic-settings), `.env.example`, [docs/runbook.md](../runbook.md) — env vars for config and secrets. |

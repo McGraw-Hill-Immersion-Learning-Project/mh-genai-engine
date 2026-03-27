@@ -45,7 +45,7 @@ All architecture decisions in one place, grouped by sprint.
 - **Alternatives considered:** LangChain (heavy abstractions, fast to prototype but hard to customise), LlamaIndex (good for document pipelines but overkill for POC scope), Haystack (similar trade-offs).
 - **Cost:** None (OSS dependencies only).
 - **Consequences/Positives:** Full control over retrieval logic (e.g. score threshold filtering at 0.65), prompt construction, and metadata handling. Every step is explicit and testable.
-- **Implementation:** `app/core/rag/` (retriever, generator, pipeline, pluggable prompts); see `docs/runbook.md` § RAG pipeline.
+- **Implementation:** `app/core/rag/` (retriever, generator, pipeline, pluggable prompts: `TemplatedLessonOutlineStrategy`, `get_lesson_outline_strategy`, `prompts/templates/*.md`, `prompts/rules/*.md`); `POST /generate/lesson-outline` wired via `app/deps.py`. See `docs/runbook.md` § RAG pipeline.
 - **Status:** Approved
 
 ---

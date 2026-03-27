@@ -7,7 +7,7 @@ import asyncpg
 
 from app.db.vector.base import VectorStore
 from app.db.vector.filters import VectorMetadataFilter
-from utils import make_pgvector_index_name
+from app.utils import make_pgvector_index_name
 
 
 def _vector_to_str(embedding: list[float]) -> str:

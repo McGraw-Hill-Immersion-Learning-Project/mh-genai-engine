@@ -61,14 +61,15 @@ This document tracks fields, endpoints, and behaviors that are **explicitly defe
 
 ### Lesson outline: HTTP handler vs in-process RAG engine
 
-- **Engine:** `LessonOutlinePipeline` + `Retriever` + `Generator` + pluggable prompts under `app/core/rag/` are implemented and covered by unit tests (`tests/core/rag/`). Retrieval uses pgvector with optional metadata filters aligned to `LessonOutlineRequest` (chapter, section, subSection, book). LLM output is parsed into `LessonOutlineGeneratedBody`; `citations` are always derived from retrieved chunk metadata, not from the model.
-- **HTTP:** `POST /generate/lesson-outline` currently returns **mock** response data in `app/api/generate.py` so the OpenAPI contract can be exercised without keys or indexed content. **Wiring the route to the pipeline** is a separate integration step (deps: `DATABASE_URL`, embeddings, indexed PDFs, `ANTHROPIC_API_KEY` when using Claude).
+- **Engine:** `LessonOutlinePipeline` + `Retriever` + `Generator` + pluggable prompts under `app/core/rag/`. Retrieval uses pgvector with optional metadata filters aligned to `LessonOutlineRequest` (chapter, section, subSection, book). Chunks are passed through **in retrieval order** (no merge/dedup). LLM output is parsed into `LessonOutlineGeneratedBody`; **`citations`** are always attached from chunk metadata (one row per chunk; optional `citations` in model JSON is ignored).
+- **Prompt templates:** `LessonOutlineRequest.template` (kebab-case) selects the lesson-outline system prompt; values match ``GET /templates/lesson-outline``. `get_lesson_outline_strategy_by_template_id` maps to markdown under `app/core/rag/prompts/templates/`. **`contentType`** selects format rules from `app/core/rag/prompts/rules/` (`format_lecture_notes.md` vs `format_ppt.md`).
+- **HTTP:** `POST /generate/lesson-outline` in `app/api/generate.py` calls the pipeline using **`get_retriever`** / **`get_llm`** from `app/deps.py`. Requires `DATABASE_URL`, embedding configuration, indexed OER content, and LLM credentials (e.g. `ANTHROPIC_API_KEY`) for real runs. **502** when the model returns invalid JSON. **`POST /generate/assessment-transform`** remains a **mock** placeholder until Workflow 2 is specified.
 
 ### Templates: what they are and who provides them
 
 - **What:** "Templates" are the Engine's 2-3 approved, guardrailed recipe types (per Project A SOW), e.g. "Title/Chapter Q&A", "Role/Scenario Coach", "Instructor task assistant" (lesson outline, assessment transform, etc.).
-- **Who provides:** The **Engine (Project A)** defines and serves the list. The Dashboard (Project B) calls `GET /templates` to list available templates and then sends the chosen template id (or equivalent) when calling generate endpoints.
-- **Decision (v0.2.0):** Endpoint-path-based routing. No `templateId` or `workflow` field in request bodies. Each workflow has its own endpoint.
+- **Who provides:** The **Engine (Project A)** defines and serves the list. The Dashboard (Project B) calls `GET /templates/{workflow}` (e.g. `lesson-outline`, `assessment-transform`) and sends the chosen template ``id`` on `POST /generate/lesson-outline` as `template` (Workflow 2 may add an equivalent field later).
+- **Routing:** Each workflow keeps its own generate endpoint; template variant is selected by the `template` field on lesson-outline requests (v0.3.0).
 
 ### Quality checklists (Workflow 1 and Workflow 2)
 
@@ -79,6 +80,8 @@ This document tracks fields, endpoints, and behaviors that are **explicitly defe
 
 ## Changelog
 
-- **2026-03-17:** Clarified lesson-outline **mock HTTP handler** vs **implemented RAG engine** (`app/core/rag/`); citations and metadata filtering behavior documented for Team B alignment.
+- **2026-03-26 (later):** Documented **wired** `POST /generate/lesson-outline`, `app/deps.py`, format `rules/`, citation order + **`snippet`**, grounding tags in **`slideOutline`**, API **v0.4.0** / `CHANGELOG_API.md`.
+- **2026-03-26:** Documented lesson-outline prompt registry (`get_lesson_outline_strategy`, `templates/*.md`, `TemplatedLessonOutlineStrategy`).
+- **2026-03-17:** Clarified lesson-outline HTTP vs in-process RAG engine (`app/core/rag/`); citations and metadata filtering behavior documented for Team B alignment.
 - **2026-02-25:** Resolved `sections` deferred item (added `section`/`subSection` to request). Resolved `workflow` field routing decision. Deferred `POST /retrieve`, `POST /telemetry/log`, content catalog endpoint. Updated assessment deferred items to reflect Workflow 2 scope change. Added quality checklist clarification.
 - **2026-02-18:** Initial deferred list: sections, batch assessment, structured rubric; templates clarification.

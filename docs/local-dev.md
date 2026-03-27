@@ -179,7 +179,9 @@ LIMIT 5;
 ## 7. RAG pipeline and generate endpoint
 
 - **In-process RAG** lives under `app/core/rag/` (`Retriever`, `Generator`, `LessonOutlinePipeline`, `prompts/`). After ingestion, chunks carry `chapter`, `section`, and `title` metadata used for **vector query filters** and **citations**. The semantic search query is built from the learning objective plus audience and duration (not from chapter labels alone).
-- **Tests:** `pytest tests/core/rag/` (no live LLM; mocked store and LLM). With Postgres up: `pytest tests/db/vector/test_pgvector.py -m pgvector` also covers **metadata filter SQL** on pgvector.
-- **Anthropic:** Install deps with `pip install -r requirements.txt` (includes `anthropic>=0.80` for `LLM_PROVIDER=anthropic`). Set `ANTHROPIC_API_KEY` in `.env`.
-- **`POST /generate/lesson-outline`:** The FastAPI route still returns **fixed mock JSON** for OpenAPI/contract checks. It does **not** invoke the RAG pipeline yet; wire the handler to `LessonOutlinePipeline` when you want curl/Postman to hit real retrieval + Claude.
+- **HTTP:** `POST /generate/lesson-outline` (`app/api/generate.py`) uses **`LessonOutlinePipeline`** with dependencies from **`app/deps.py`**. You need **Postgres + indexed chunks** (ingest a PDF first), embedding config, and an LLM key when not using a test override. Optional **`LOG_LEVEL=DEBUG`** prints full prompt text for `app.*` loggers.
+- **Lesson-outline prompts:** Markdown under `app/core/rag/prompts/templates/`; **format rules** (lecture vs deck) under `prompts/rules/`. API field **`template`** (kebab-case from `GET /templates/lesson-outline`) maps via **`get_lesson_outline_strategy_by_template_id`**. Authoring contract: `app/core/rag/prompts/base.py`.
+- **Grounding:** Responses include **`citations`** (one per retrieved chunk; each has a short **`snippet`**) and model text may use **`<grounded ref="i">`** matching `citations[i]` (including **`slideOutline`** for `ppt`).
+- **Tests:** `pytest tests/core/rag/` (mocked store + LLM). With Postgres up: `pytest tests/db/vector/test_pgvector.py -m pgvector` for **metadata filter SQL**. Full API tests: `pytest tests/api/test_generate.py`.
+- **Anthropic:** `pip install -r requirements.txt` (`anthropic>=0.80`). Set `ANTHROPIC_API_KEY` in `.env` when `LLM_PROVIDER=anthropic`.
 

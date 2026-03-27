@@ -11,6 +11,7 @@ None required for health check. See `.env.example` in repo root for all availabl
 | Variable | Purpose | Example / notes |
 |----------|---------|-----------------|
 | APP_ENV | Environment name | `development`, `staging`, `production` |
+| LOG_LEVEL | Verbosity for `app.*` loggers | Default `INFO`; set `DEBUG` for full RAG prompt traces in logs |
 | LLM_PROVIDER | LLM backend | `anthropic` (default), `gemini` |
 | LLM_MODEL | Model name | `claude-sonnet-4-6`, `gemini-3-flash-preview` |
 | EMBEDDING_PROVIDER | Embedding backend | `voyage` (default), `gemini`, `dev` (synthetic local) |
@@ -38,21 +39,25 @@ None required for health check. See `.env.example` in repo root for all availabl
 1. `cp .env.example .env` — copy template and set any values (optional for health check only)
 2. **Vector DB (pgvector):** For ingestion, start Postgres with pgvector: `docker compose up db -d`. This runs Postgres on port 5432. Set `DATABASE_URL=postgresql://mhgenai:mhgenai@localhost:5432/mhgenai` in `.env` (or use the default).
 3. **Docker (full stack):** `docker compose up --build` — builds and runs the app + db on ports 8000 and 5432
-4. **No Docker:** `pip install -r requirements.txt` then `uvicorn app.main:app --reload`
+4. **No Docker:** `pip install -r requirements.txt` then `uvicorn app.main:app --reload` (or `fastapi dev` from the repo root)
 5. Verify: `curl http://localhost:8000/health` returns `{"status":"ok"}`
 
 ### RAG pipeline (lesson outline)
 
-The **engine** implements lesson-outline RAG in-process (see `app/core/rag/`):
+The **engine** implements lesson-outline RAG in-process (see `app/core/rag/`). **`POST /generate/lesson-outline`** (`app/api/generate.py`) is wired to this stack via **`app/deps.py`** (`get_retriever`, `get_llm`).
 
 | Piece | Role |
 |-------|------|
-| `Retriever` | Embeds a semantic query string, runs pgvector similarity search with optional `VectorMetadataFilter` (chapter, section, sub-section prefix, book substring on `title`). |
-| `Generator` | Builds chat turns via a `LessonOutlinePromptStrategy`, calls `LLMProvider.complete`, parses JSON into `LessonOutlineGeneratedBody`, attaches `citations` from chunk metadata. |
+| `Retriever` | Embeds a semantic query string, runs pgvector similarity search with optional `VectorMetadataFilter` (chapter, section, sub-section prefix, book substring on `title`). Returns chunks **in retrieval order** (no merge/dedup). |
+| `Generator` | Builds chat turns via a `LessonOutlinePromptStrategy`, calls `LLMProvider.complete`, parses JSON into `LessonOutlineGeneratedBody`, attaches **`citations`** (one per chunk, same order as `### Passage [i]` in the prompt). Strips any `citations` key from raw LLM JSON. |
 | `LessonOutlinePipeline` | `build_embedding_query()` = learning objective + audience + session length; `metadata_filter_for_request()` = structural fields from `LessonOutlineRequest`. |
-| `app/core/rag/prompts/` | Pluggable strategies + `default_lesson_outline.md` (`.format()` placeholders, `{retrieved_context}`, optional `<grounded ref="N">` for UI). |
+| `app/core/rag/prompts/` | `TemplatedLessonOutlineStrategy` loads markdown from `prompts/templates/` and injects **format rules** from `prompts/rules/` (`format_lecture_notes.md` vs `format_ppt.md`) based on `contentType`. Templates include `{retrieved_context}` and **`<grounded ref="N">`** guidance for `outline` and **`slideOutline`**. Registry: `get_lesson_outline_strategy_by_template_id` maps kebab-case API `template` ids to internal keys (`default`, `lecture_scaffold_one_shot`). |
 
-**HTTP vs engine:** `POST /generate/lesson-outline` in `app/api/generate.py` still returns **mock** JSON for contract smoke tests. It does **not** call the pipeline yet. To exercise RAG: run `pytest tests/core/rag/` (mocked deps) or wire the route / a script to `LessonOutlinePipeline` + `get_*` providers.
+**Startup:** When `VECTOR_DB_PROVIDER=pgvector`, `app/main.py` lifespan attempts **`ensure_collection`** / **`ensure_index`** so the chunks table exists before traffic or ingest.
+
+**Failure modes:** Invalid LLM JSON → **502** from the lesson-outline route. Empty retrieval still runs the LLM (prompt explains no passages).
+
+**Tests:** `pytest tests/core/rag/` (mocked store + LLM). Full suite also covers API + integration paths (`pytest tests/` — on the order of **120+** tests with DB up).
 
 **LLM:** With `LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` set, `get_llm_provider()` returns `AnthropicLLMProvider` (`anthropic` SDK ≥ 0.80, `AsyncAnthropic.messages.create`).
 
@@ -72,7 +77,7 @@ To run **all** tests, including the **pgvector** integration tests (Postgres + S
    ```bash
    pytest
    ```
-   Pytest loads `.env` automatically (see `tests/conftest.py`). If the DB is up and `DATABASE_URL` is set, **pgvector-marked** tests run; if not, they are **skipped**. Run `pytest` (or `pytest -q`) and check the summary for passed vs skipped. Typical full run is on the order of **90+** collected tests.
+   Pytest loads `.env` automatically (see `tests/conftest.py`). If the DB is up and `DATABASE_URL` is set, **pgvector-marked** tests run; if not, they are **skipped**. Run `pytest` (or `pytest -q`) and check the summary for passed vs skipped. Typical full run is on the order of **120+** collected tests.
 
 To run only the pgvector tests: `pytest -m pgvector -v`.
 
@@ -149,4 +154,4 @@ Optional speed knobs (dev only):
 
 ---
 
-*Last updated: 2026-03-17. Keep this doc in sync with the backend and deploy process.*
+*Last updated: 2026-03-26. Keep this doc in sync with the backend and deploy process.*

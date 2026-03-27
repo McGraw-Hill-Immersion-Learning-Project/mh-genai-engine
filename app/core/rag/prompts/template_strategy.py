@@ -1,17 +1,50 @@
-"""Default lesson-outline prompt: load template from disk, inject context via .format()."""
+"""Lesson-outline prompt strategy: load a markdown template from disk, inject request + RAG context via ``str.format()``."""
 
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
-
-from app.models.generate import LessonOutlineRequest
+from typing import TYPE_CHECKING
 
 from app.core.rag.retriever import RetrievedChunk
 
+if TYPE_CHECKING:
+    from app.models.generate import LessonOutlineRequest
 
-def _load_template() -> str:
-    path = Path(__file__).resolve().parent / "templates/default_lesson_outline.md"
-    return path.read_text(encoding="utf-8")
+_TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
+_RULES_DIR = Path(__file__).resolve().parent / "rules"
+_FORMAT_LECTURE_NOTES_PATH = _RULES_DIR / "format_lecture_notes.md"
+_FORMAT_PPT_PATH = _RULES_DIR / "format_ppt.md"
+
+
+@lru_cache(maxsize=1)
+def _load_format_rules_lecture_notes() -> str:
+    return _FORMAT_LECTURE_NOTES_PATH.read_text(encoding="utf-8").strip()
+
+
+@lru_cache(maxsize=1)
+def _load_format_rules_ppt() -> str:
+    return _FORMAT_PPT_PATH.read_text(encoding="utf-8").strip()
+
+
+def load_format_rules_for_content_type(content_type: str) -> str:
+    """Format rules for the active output mode only (smaller prompt than both at once).
+
+    *content_type* is the request enum value: ``lecture_notes`` or ``ppt``.
+    """
+    if content_type == "ppt":
+        return _load_format_rules_ppt()
+    return _load_format_rules_lecture_notes()
+
+
+def load_lesson_outline_template(filename: str) -> str:
+    """Load a ``.format()``-compatible markdown template from ``templates/``."""
+    return (_TEMPLATES_DIR / filename).read_text(encoding="utf-8")
+
+
+def _load_default_template() -> str:
+    """Template used when ``TemplatedLessonOutlineStrategy()`` is called with no ``template`` argument."""
+    return load_lesson_outline_template("default_lesson_outline.md")
 
 
 def _format_retrieved_context(chunks: list[RetrievedChunk]) -> str:
@@ -41,11 +74,11 @@ def _format_retrieved_context(chunks: list[RetrievedChunk]) -> str:
     return "\n\n".join(parts)
 
 
-class DefaultLessonOutlineStrategy:
-    """Single system message: instructions + formatted request + retrieved context."""
+class TemplatedLessonOutlineStrategy:
+    """Build one system turn from a format-string template plus retrieved passages."""
 
     def __init__(self, template: str | None = None) -> None:
-        self._template = template if template is not None else _load_template()
+        self._template = template if template is not None else _load_default_template()
 
     def build_messages(
         self,
@@ -53,16 +86,22 @@ class DefaultLessonOutlineStrategy:
         chunks: list[RetrievedChunk],
     ) -> list[dict[str, str]]:
         retrieved_context = _format_retrieved_context(chunks)
-        system_content = self._template.format(
+        task_body = self._template.format(
             learning_objective=request.learning_objective,
             audience_level=request.audience_level.value,
             content_type=request.content_type.value,
-            chapter=request.chapter,
+            chapter=request.chapter or "",
             section=request.section or "",
             sub_section=request.sub_section or "",
             book=request.book or "",
             count=str(request.count),
             retrieved_context=retrieved_context,
+        )
+        system_content = "\n\n---\n\n".join(
+            (
+                load_format_rules_for_content_type(request.content_type.value),
+                task_body,
+            )
         )
         return [
             {"role": "system", "content": system_content},

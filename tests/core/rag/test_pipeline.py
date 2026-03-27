@@ -10,7 +10,7 @@ from app.models.generate import (
 from app.core.rag.generator import Generator
 from app.db.vector.filters import VectorMetadataFilter
 from app.core.rag.pipeline import LessonOutlinePipeline
-from app.core.rag.prompts.default_strategy import DefaultLessonOutlineStrategy
+from app.core.rag.prompts.template_strategy import TemplatedLessonOutlineStrategy
 from app.core.rag.retriever import Retriever
 
 from tests.mocks import FakeEmbeddingProvider, FakeLLMProvider, InMemoryVectorStore
@@ -35,7 +35,7 @@ async def test_pipeline_end_to_end_with_mocks() -> None:
     )
 
     retriever = Retriever(FakeEmbeddingProvider(dimensions=8), store)
-    generator = Generator(FakeLLMProvider(), DefaultLessonOutlineStrategy())
+    generator = Generator(FakeLLMProvider(), TemplatedLessonOutlineStrategy())
     pipeline = LessonOutlinePipeline(retriever, generator, n_results=5)
 
     request = LessonOutlineRequest(
@@ -70,6 +70,18 @@ def test_build_embedding_query_uses_objective_audience_and_duration() -> None:
     assert "10" in q
     assert "minutes" in q.lower()
     assert "My Book" not in q
+
+
+def test_metadata_filter_for_request_omits_chapter_when_not_set() -> None:
+    req = LessonOutlineRequest(
+        learningObjective="X",
+        contentType=ContentType.LECTURE_NOTES,
+        count=5,
+        audienceLevel=AudienceLevel.BEGINNER,
+    )
+    f = LessonOutlinePipeline.metadata_filter_for_request(req)
+    assert f.chapter is None
+    assert not f.has_any()
 
 
 def test_metadata_filter_for_request_maps_structural_fields() -> None:
@@ -110,7 +122,7 @@ async def test_pipeline_metadata_filter_excludes_wrong_chapter() -> None:
         ],
     )
     retriever = Retriever(FakeEmbeddingProvider(dimensions=8), store)
-    generator = Generator(FakeLLMProvider(), DefaultLessonOutlineStrategy())
+    generator = Generator(FakeLLMProvider(), TemplatedLessonOutlineStrategy())
     pipeline = LessonOutlinePipeline(retriever, generator, n_results=5)
 
     request = LessonOutlineRequest(

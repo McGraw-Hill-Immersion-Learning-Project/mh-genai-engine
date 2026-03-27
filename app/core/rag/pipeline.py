@@ -7,6 +7,9 @@ from app.models.generate import LessonOutlineRequest, LessonOutlineResponse
 
 from app.core.rag.generator import Generator
 from app.core.rag.retriever import Retriever
+from app.utils import get_logger
+
+logger = get_logger(__name__)
 
 
 class LessonOutlinePipeline:
@@ -53,4 +56,5 @@ class LessonOutlinePipeline:
             n_results=self._n_results,
             metadata_filter=meta_filter,
         )
+        logger.info("lesson_outline_retrieval n_chunks=%d", len(chunks))
         return await self._generator.generate(chunks, request)
